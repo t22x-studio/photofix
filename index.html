@@ -294,7 +294,7 @@
       <div class="stage" id="stage">
         <div class="dropzone" id="dropzone">
           <div class="icon">⬆</div>
-          <h2>Upload a photo</h2>
+          <h2>Load a photo</h2>
           <p>Drag &amp; drop an image here, or tap to browse</p>
           <button class="primary" id="browseBtn">Choose image</button>
         </div>
@@ -1384,7 +1384,7 @@ function updateSliderLabel(key){
   val.classList.toggle("changed", Number(input.value)!==0);
 }
 
-/* ---------- Upload handling ---------- */
+/* ---------- Load handling ---------- */
 els.browseBtn.addEventListener("click", () => fileInput.click());
 els.newBtn.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
