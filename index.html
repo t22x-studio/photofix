@@ -33,9 +33,9 @@
   body { display: flex; flex-direction: column; }
 
   header {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; gap: 8px;
     padding: 12px 16px; border-bottom: 1px solid var(--border);
-    background: var(--panel); flex-shrink: 0;
+    background: var(--panel); flex-shrink: 0; overflow: hidden;
   }
   .brand { display: flex; align-items: center; gap: 10px; }
   .brand .dot {
@@ -44,14 +44,14 @@
   }
   .brand h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; }
   .brand span { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
-    .header-actions {
+  .header-actions {
     display: flex; gap: 6px;
     overflow-x: auto; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; flex-shrink: 1; min-width: 0;
-    padding-bottom: 2px;
+    scrollbar-width: none; flex: 1; min-width: 0;
+    padding-bottom: 2px; padding-right: 4px;
   }
   .header-actions::-webkit-scrollbar { display: none; }
-  .header-actions button { flex-shrink: 0; }
+  .header-actions button { flex-shrink: 0; font-size: 12px; padding: 7px 10px; }
 
   button {
     font-family: inherit; cursor: pointer; border: 1px solid var(--border);
@@ -232,9 +232,10 @@
     }
     .stage { padding: 12px; height: 54vh; }
     .filter-grid { grid-template-columns: 1fr 1fr; }
-    header { padding: 10px 12px; }
+    header { padding: 8px 10px; gap: 6px; }
+    .brand { flex-shrink: 0; }
     .brand span { display: none; }
-    button { padding: 9px 12px; }
+    .header-actions button { padding: 7px 9px; font-size: 11px; }
 
     .mobile-tabs { display: flex; gap: 6px; margin-bottom: 4px; position: sticky; top: 0;
       background: var(--panel); padding-bottom: 8px; z-index: 2; }
@@ -335,6 +336,10 @@
             <span style="font-size:10px; opacity:0.7;">EXIF</span>
             <strong id="exifStatus">KEEP</strong>
           </button>
+        </div>
+                <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <button id="exportPngBtn2" class="ghost" style="flex:1;justify-content:center;font-size:12px;padding:8px 4px;">Export PNG</button>
+          <button id="exportJpgBtn2" class="primary" style="flex:1;justify-content:center;font-size:12px;padding:8px 4px;">Export JPG</button>
         </div>
         <div style="margin-bottom:12px; padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
           <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">Export Filename</div>
@@ -2066,6 +2071,8 @@ els.exportJpgBtn.addEventListener("click", () => {
     triggerDownload(newJpg, buildExportName("jpg"));
   }
 });
+document.getElementById("exportPngBtn2").addEventListener("click", () => els.exportPngBtn.click());
+document.getElementById("exportJpgBtn2").addEventListener("click", () => els.exportJpgBtn.click());
 
 /* ---------- Crop ---------- */
 let cropping = false;
