@@ -42,7 +42,14 @@
     width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
     box-shadow: 0 0 12px var(--accent);
   }
-  .brand h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; }
+    .brand h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; }
+  .title-short { display: none; }
+  .brand-badge {
+    display: none; width: 28px; height: 28px; border-radius: 6px;
+    background: var(--accent); color: var(--accent-fg);
+    font-size: 13px; font-weight: 700; align-items: center; justify-content: center;
+    flex-shrink: 0; letter-spacing: -0.02em;
+  }
   .brand span { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
   .header-actions {
     display: flex; gap: 6px;
@@ -202,14 +209,15 @@
   input[type="range"] {
     -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
     background: var(--panel-2); border-radius: 999px; outline: none; cursor: pointer;
+    padding: 10px 0; box-sizing: content-box;
   }
   input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
+    -webkit-appearance: none; appearance: none; width: 22px; height: 22px;
     border-radius: 50%; background: var(--accent); cursor: pointer;
     border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--accent);
   }
   input[type="range"]::-moz-range-thumb {
-    width: 16px; height: 16px; border-radius: 50%; background: var(--accent);
+    width: 22px; height: 22px; border-radius: 50%; background: var(--accent);
     cursor: pointer; border: 2px solid var(--bg);
   }
   .group-label { font-size: 11px; color: var(--muted); margin: 4px 0 8px; font-weight: 600; }
@@ -235,12 +243,16 @@
     header { padding: 8px 10px; gap: 6px; }
     .brand { flex-shrink: 0; }
     .brand span { display: none; }
+    .brand h1 { display: none; }
+    .brand .dot { display: none; }
+    .brand-badge { display: inline-flex; }
     .header-actions button { padding: 7px 9px; font-size: 11px; }
 
     .mobile-tabs { display: flex; gap: 6px; margin-bottom: 4px; position: sticky; top: 0;
       background: var(--panel); padding-bottom: 8px; z-index: 2; }
     .mobile-tabs button { flex: 1; justify-content: center; }
     .mobile-tabs button.active { border-color: var(--accent); background: rgba(245,158,11,.12); color: var(--accent); }
+    .pane { display: none; }
     .pane { display: none; }
     .pane.active { display: block; }
     aside.mobile .pane-adjust { display: block; }
@@ -254,23 +266,24 @@
 </head>
 <body>
   <header>
-    <div class="brand">
+      <div class="brand">
       <div class="dot"></div>
+      <div class="brand-badge">P:</div>
       <div>
         <h1>Photo Helper</h1>
       </div>
       <span>Image Editor &copy; 2026</span>
     </div>
     <div class="header-actions">
-      <button id="newBtn" class="ghost" style="display:none">Upload new</button>
-      <button id="undoBtn" class="ghost" style="display:none;opacity:0.4;" disabled>↩ Undo</button>
-      <button id="redoBtn" class="ghost" style="display:none;opacity:0.4;" disabled>Redo ↪</button>
-      <button id="cropBtn" class="ghost" style="display:none">Crop</button>
-      <button id="cancelCropBtn" class="ghost" style="display:none;color:var(--muted);">✕ Cancel</button>
-      <button id="flipBtn" class="ghost" style="display:none">Flip</button>
+      <button id="newBtn" class="ghost" style="display:none">Open</button>
+      <button id="undoBtn" class="ghost" style="display:none;opacity:0.4;" disabled>↺</button>
+      <button id="redoBtn" class="ghost" style="display:none;opacity:0.4;" disabled>↻</button>
       <button id="rotateBtn" class="ghost" style="display:none">Rotate</button>
-      <button id="frameBtn" class="ghost" style="display:none">Canvas</button>
       <button id="resetBtn" class="ghost" style="display:none">Reset</button>
+      <button id="cropBtn" class="ghost" style="display:none">⛶</button>
+      <button id="cancelCropBtn" class="ghost" style="display:none;color:var(--muted);">✕ Cancel</button>
+     <button id="flipBtn" class="ghost" style="display:none">Flip</button>
+      <button id="frameBtn" class="ghost" style="display:none">Canvas</button>
       <button id="exportPngBtn" class="ghost" style="display:none">Export PNG</button>
       <button id="exportJpgBtn" class="primary" style="display:none">Export JPG</button>
     </div>
@@ -1301,11 +1314,13 @@ els.frameBtn.addEventListener("click", () => {
   stageEl.classList.toggle("frame-mode");
   els.frameBtn.classList.toggle("primary");
   els.frameBtn.classList.toggle("ghost");
-  // Switch sidebar to Frame tab
-  document.querySelectorAll(".mobile-tabs button").forEach(b => b.classList.remove("active"));
-  document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
-  els.tabFrame.classList.add("active");
-  els.paneFrame.classList.add("active");
+  // Only switch to Canvas tab if sidebar is visible (desktop or mobile)
+  if (window.innerWidth <= 860) {
+    document.querySelectorAll(".mobile-tabs button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
+    els.tabFrame.classList.add("active");
+    els.paneFrame.classList.add("active");
+  }
 });
 ADJ_GROUPS.forEach(group => {
   const gl = document.createElement("div");
