@@ -16,7 +16,7 @@ A fully offline, privacy-first browser-based photo editor. No uploads, no server
 - Tonal: Levels (Black point, Gamma, White point)
 
 **Filters**
-- Oil Paint, Anime, Bright, B&W, Sketch, Comic, Poster, Risograph, Pixel, Pixel Game
+- Oil Paint, Watercolor, Anime, Bright, B&W, Noir, Sketch, Comic, Pixel, Pixel Game
 - Filter strength slider (0–100%)
 - Pixel filters: adjustable palette size (8 / 16 / 32 / 64 / Full colours)
 
@@ -36,8 +36,8 @@ A fully offline, privacy-first browser-based photo editor. No uploads, no server
 - JSON settings export/import for batch consistency
 
 **Workflow**
-- Undo / Redo — 12 steps (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z)
-- Before/After toggle — press `\`
+- Undo / Redo — Multiple steps (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z)
+- Before/After toggle — press `\` or tap and hold
 - LocalStorage: remembers last slider settings between sessions
 - RGB Histogram with level markers
 - Zoom 10–200% with click-drag pan
