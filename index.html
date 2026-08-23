@@ -280,12 +280,12 @@
       <button id="redoBtn" class="ghost" style="display:none;opacity:0.4;" disabled>↻</button>
       <button id="rotateBtn" class="ghost" style="display:none">Rotate</button>
       <button id="resetBtn" class="ghost" style="display:none">Reset</button>
-      <button id="cropBtn" class="ghost" style="display:none">⛶</button>
+      <button id="cropBtn" class="ghost" style="display:none">Crop</button>
       <button id="cancelCropBtn" class="ghost" style="display:none;color:var(--muted);">✕ Cancel</button>
      <button id="flipBtn" class="ghost" style="display:none">Flip</button>
       <button id="frameBtn" class="ghost" style="display:none">Canvas</button>
-      <button id="exportPngBtn" class="ghost" style="display:none">Export PNG</button>
       <button id="exportJpgBtn" class="primary" style="display:none">Export JPG</button>
+      <button id="exportPngBtn" class="ghost" style="display:none">Export PNG</button>
     </div>
   </header>
 
@@ -322,7 +322,7 @@
 
             <div class="pane pane-adjust active" id="paneAdjust">
                 <div class="section-title">Adjustments</div>
-        <div class="hint" style="margin-top:-6px;margin-bottom:10px;">Press <kbd style="font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:3px;background:var(--panel-2);">\</kbd> to toggle before / after</div>
+        <div class="hint" style="margin-top:-6px;margin-bottom:10px;">Press <kbd style="font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:3px;background:var(--panel-2);">\</kbd> or tap and hold to see before / after</div>
                 <div style="margin-bottom:8px; padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
           <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Export Size</div>
                     <div style="display:flex;gap:4px;margin-bottom:6px;">
@@ -337,22 +337,17 @@
             <span style="font-size:11px;color:var(--muted);">px</span>
           </div>
         </div>
-        <div style="margin-bottom:12px; display:flex; gap:8px;">
-          <div style="flex:1; padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
-            <div class="slider-head" style="margin-bottom:4px;">
-              <label style="font-size:11px;color:var(--muted);">Quality</label>
-              <span id="jpgQualityVal" style="font-size:11px;color:var(--muted);">92%</span>
-            </div>
-            <input type="range" id="jpgQuality" min="80" max="100" value="92" />
+                <div style="padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;">
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+            <span style="font-size:11px;color:var(--muted);white-space:nowrap;">JPG Q</span>
+            <input type="range" id="jpgQuality" min="80" max="100" value="92" style="flex:1;" />
+            <span id="jpgQualityVal" style="font-size:11px;color:var(--muted);min-width:28px;text-align:right;">92%</span>
+            <button id="exifBtn" class="ghost active" style="padding:3px 7px;font-size:10px;border-color:var(--accent);background:rgba(245,158,11,.12);color:var(--accent);white-space:nowrap;">EXIF <strong id="exifStatus">ON</strong></button>
           </div>
-          <button id="exifBtn" class="ghost active" style="width:80px; flex-direction:column; gap:2px; border-color:var(--accent); background:rgba(245,158,11,.12); color:var(--accent);">
-            <span style="font-size:10px; opacity:0.7;">EXIF</span>
-            <strong id="exifStatus">KEEP</strong>
-          </button>
-        </div>
-                <div style="display:flex;gap:6px;margin-bottom:8px;">
-          <button id="exportPngBtn2" class="ghost" style="flex:1;justify-content:center;font-size:12px;padding:8px 4px;">Export PNG</button>
-          <button id="exportJpgBtn2" class="primary" style="flex:1;justify-content:center;font-size:12px;padding:8px 4px;">Export JPG</button>
+          <div style="display:flex;gap:5px;">
+            <button id="exportJpgBtn2" class="primary" style="flex:1;justify-content:center;font-size:12px;padding:7px 4px;">Export JPG</button>
+            <button id="exportPngBtn2" class="ghost" style="flex:1;justify-content:center;font-size:12px;padding:7px 4px;">Export PNG</button>
+          </div>
         </div>
         <div style="margin-bottom:12px; padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
           <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">Export Filename</div>
@@ -1254,6 +1249,22 @@ const ctx = canvas.getContext("2d", { willReadFrequently:true });
 const cropOverlay = document.getElementById("cropOverlay");
 const cropCtx = cropOverlay.getContext("2d");
 const canvasWrap = document.getElementById("canvasWrap");
+/* ---- Tap-and-hold canvas to peek before/after (mobile) ---- */
+let holdTimer = null;
+canvas.addEventListener("touchstart", e => {
+  if (cropping || !originalImageData) return;
+  holdTimer = setTimeout(() => {
+    showingBefore = true;
+    ctx.putImageData(sourceImageData, 0, 0);
+  }, 500);
+}, {passive:true});
+canvas.addEventListener("touchend", () => {
+  clearTimeout(holdTimer);
+  if (showingBefore){ showingBefore = false; render(); }
+});
+canvas.addEventListener("touchmove", () => {
+  clearTimeout(holdTimer); // cancel hold if finger moves (panning)
+});
 const dropzone = document.getElementById("dropzone");
 const sidebar = document.getElementById("sidebar");
 const fileInput = document.getElementById("fileInput");
@@ -1314,7 +1325,6 @@ els.frameBtn.addEventListener("click", () => {
   stageEl.classList.toggle("frame-mode");
   els.frameBtn.classList.toggle("primary");
   els.frameBtn.classList.toggle("ghost");
-  // Only switch to Canvas tab if sidebar is visible (desktop or mobile)
   if (window.innerWidth <= 860) {
     document.querySelectorAll(".mobile-tabs button").forEach(b => b.classList.remove("active"));
     document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
@@ -1921,7 +1931,7 @@ els.jpgQuality.addEventListener("input", () => {
 
 els.exifBtn.addEventListener("click", () => {
   keepExif = !keepExif;
-  els.exifStatus.textContent = keepExif ? "KEEP" : "STRIP";
+    els.exifStatus.textContent = keepExif ? "ON" : "OFF";
   els.exifBtn.style.borderColor = keepExif ? "var(--accent)" : "var(--border)";
   els.exifBtn.style.background = keepExif ? "rgba(245,158,11,.12)" : "var(--panel-2)";
   els.exifBtn.style.color = keepExif ? "var(--accent)" : "var(--muted)";
@@ -2444,12 +2454,16 @@ const tabAdjust = document.getElementById("tabAdjust");
 const paneFilters = document.getElementById("paneFilters");
 const paneAdjust = document.getElementById("paneAdjust");
 tabFilters.addEventListener("click", () => {
-  tabFilters.classList.add("active"); tabAdjust.classList.remove("active");
-  paneFilters.classList.add("active"); paneAdjust.classList.remove("active");
+  document.querySelectorAll(".mobile-tabs button").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
+  tabFilters.classList.add("active");
+  paneFilters.classList.add("active");
 });
 tabAdjust.addEventListener("click", () => {
-  tabAdjust.classList.add("active"); tabFilters.classList.remove("active");
-  paneAdjust.classList.add("active"); paneFilters.classList.remove("active");
+  document.querySelectorAll(".mobile-tabs button").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
+  tabAdjust.classList.add("active");
+  paneAdjust.classList.add("active");
 });
 function injectExif(newJpgBase64, originalBytes) {
   const bin = atob(newJpgBase64.split(',')[1]);
