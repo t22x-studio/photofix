@@ -44,7 +44,14 @@
   }
   .brand h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; }
   .brand span { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
-  .header-actions { display: flex; gap: 8px; }
+    .header-actions {
+    display: flex; gap: 6px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; flex-shrink: 1; min-width: 0;
+    padding-bottom: 2px;
+  }
+  .header-actions::-webkit-scrollbar { display: none; }
+  .header-actions button { flex-shrink: 0; }
 
   button {
     font-family: inherit; cursor: pointer; border: 1px solid var(--border);
@@ -67,11 +74,11 @@
   }
   .stage {
     flex: 1; 
-    display: flex; /* Keep flex so margin:auto works */
-    /* Remove align-items and justify-content center */
+    display: flex;
     min-width: 0; 
     min-height: 0; 
     overflow: auto; 
+    -webkit-overflow-scrolling: touch;
     position: relative;
     padding: 40px; 
   }
@@ -106,7 +113,7 @@
     display: block; 
     border-radius: 6px;
     box-shadow: 0 24px 60px rgba(0,0,0,.6); 
-    touch-action: none;
+    touch-action: pan-x pan-y;
     width: 100%; /* Scale with parent */
     height: 100%; /* Scale with parent */
   }
