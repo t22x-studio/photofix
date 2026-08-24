@@ -1,7 +1,7 @@
 # Photo Helper 📷
 
-A fully offline, privacy-first browser-based photo editor. No uploads, no server, no account. Your photos never leave your device.
-
+A fully offline, privacy-first browser-based lightweight photo editor for quick edits. No uploads, no server, no account. Your photos never leave your device.
+The quick image editing tool for convert, rotate, resize, frame, rename, clean metadata, export, and more.
 **[→ Open Photo Helper](https://t22x-studio.github.io/photofix/)**
 
 ---
