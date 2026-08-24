@@ -1117,7 +1117,7 @@ document.getElementById("resetAdjBtn").addEventListener("click", () => {
   resetUIState();
   recomputeFilterBase();
   render();
-  saveToStorage(); // Save the "Clean" state
+  saveToStorage();
 });
 
 // loadFromStorage called after adjustments declared below
@@ -1569,6 +1569,7 @@ const PIXEL_FILTERS = new Set(["pixelA","pixelB"]);
 const pixelPaletteBox = document.getElementById("pixelPaletteBox");
 document.querySelectorAll(".pal-btn").forEach(btn => {
   btn.addEventListener("click", () => {
+    historyPush(false); 
     document.querySelectorAll(".pal-btn").forEach(b => {
       b.style.borderColor=""; b.style.background=""; b.style.color="";
     });
@@ -1579,6 +1580,7 @@ document.querySelectorAll(".pal-btn").forEach(btn => {
     if (PIXEL_FILTERS.has(activeFilter)){
       filteredRaw=null; recomputeFilterBase(); render();
     }
+    saveToStorage();
   });
 });
 
@@ -1625,12 +1627,18 @@ function historySnapshot(isDestructive){
   if (isDestructive) lastDestructivePixels = pixels;
   return {
     adjustments: {...adjustments},
-    levels: {...levels}, // ADDED: Capture levels state
+    levels: {...levels},
+    canvasSettings: JSON.parse(JSON.stringify(canvasSettings)), // Deep copy
+    pixelPaletteSize: pixelPaletteSize,
     filter: activeFilter,
     strength,
     imageW: originalImageData.width,
     imageH: originalImageData.height,
-    imageData: pixels
+    imageData: pixels,
+    // Save metadata for high-res mapping and dimensions
+    cropRatio: cropRatio ? { ...cropRatio } : null,
+    actualWidth: actualWidth,
+    actualHeight: actualHeight
   };
 }
 
@@ -1686,8 +1694,17 @@ document.getElementById("autoLevelsBtn").addEventListener("click", runAutoLevels
 function restoreEntry(entry){
   adjustments = {...entry.adjustments};
   if (entry.levels) levels = {...entry.levels};
+  if (entry.canvasSettings) canvasSettings = {...entry.canvasSettings};
+  if (entry.pixelPaletteSize !== undefined) pixelPaletteSize = entry.pixelPaletteSize;
+  
+  // Restore high-res mapping metadata
+  cropRatio = entry.cropRatio ? { ...entry.cropRatio } : null;
+  actualWidth = entry.actualWidth || entry.imageW;
+  actualHeight = entry.actualHeight || entry.imageH;
+
   activeFilter = entry.filter;
   strength = entry.strength;
+
   // Restore pixels if it was a destructive step (crop/rotate)
   if (entry.imageData){
     originalImageData = new ImageData(new Uint8ClampedArray(entry.imageData), entry.imageW, entry.imageH);
@@ -1709,16 +1726,17 @@ function restoreEntry(entry){
 
 els.undoBtn.addEventListener("click", () => {
   if (!undoStack.length) return;
-  // Push CURRENT state to redo stack before restoring (State-only, no pixels)
-  redoStack.push(historySnapshot(false)); 
+  // Push CURRENT state to redo stack. We use true to ensure pixels are 
+  // saved if the state we are undoing was a crop/rotate.
+  redoStack.push(historySnapshot(true)); 
   const entry = undoStack.pop();
   restoreEntry(entry);
 });
 
 els.redoBtn.addEventListener("click", () => {
   if (!redoStack.length) return;
-  // Push CURRENT state to undo stack before restoring (State-only, no pixels)
-  undoStack.push(historySnapshot(false));
+  // Push CURRENT state to undo stack before restoring.
+  undoStack.push(historySnapshot(true));
   const entry = redoStack.pop();
   restoreEntry(entry);
 });
@@ -1935,20 +1953,24 @@ cvMarginEl.addEventListener("input", () => {
   cvMarginVal.textContent = canvasSettings.margin + "%";
   render();
 });
+cvMarginEl.addEventListener("change", () => { historyPush(false); saveToStorage(); });
 
 cvColorEl.addEventListener("input", () => {
   canvasSettings.color = cvColorEl.value;
   document.getElementById("cvColorHex").textContent = canvasSettings.color;
   render();
 });
+cvColorEl.addEventListener("change", () => { historyPush(false); saveToStorage(); });
 
 document.querySelectorAll(".ratio-btn").forEach(btn => {
   btn.addEventListener("click", () => {
+    historyPush(false); // Capture state BEFORE changing
     document.querySelectorAll(".ratio-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     canvasSettings.ratio = btn.dataset.ratio;
     render();
     autoFitZoom();
+    saveToStorage();
   });
 });
 
