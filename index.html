@@ -1412,8 +1412,15 @@ function loadFile(file){
 }
 
 function setupImage(img){
-  sourceFullImg = img;
-  cropRatio = null;
+  sourceFullImg = img; cropRatio = null;
+  canvasSettings = { ratio: "original", margin: 0, color: "#ffffff" };
+  document.querySelectorAll(".ratio-btn").forEach(b => b.classList.toggle("active", b.dataset.ratio === "original"));
+  if (document.getElementById("cvMargin")){
+    document.getElementById("cvMargin").value = 0;
+    document.getElementById("cvMarginVal").textContent = "0%";
+    document.getElementById("cvColor").value = "#ffffff";
+    document.getElementById("cvColorHex").textContent = "#ffffff";
+  }
   exportNameLocked = false;
   let { width:w, height:h } = img;
   actualWidth = img.naturalWidth;
