@@ -481,6 +481,7 @@ function blendImageData(base, filtered, amount){
 }
 
 function applyAdjustments(src, adj){
+  if (!src || !adj) return src; // Safety check
   const out = cloneImageData(src);
   const d = out.data;
   
@@ -1038,11 +1039,31 @@ exportNameInput.addEventListener("input", () => { exportNameLocked = true; });
 /* ---- LocalStorage persistence ---- */
 const LS_KEY = "photohelper_state";
 
+
 function saveToStorage(){
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({
-      adjustments, filter: activeFilter, strength
+      adjustments,
+      levels,
+      canvasSettings,
+      activeFilter,
+      strength,
+      pixelPaletteSize
     }));
+  } catch(e){}
+}
+
+function loadFromStorage(){
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.adjustments) adjustments = {...DEFAULT_ADJ, ...s.adjustments};
+    if (s.levels) levels = {...levels, ...s.levels};
+    if (s.canvasSettings) canvasSettings = {...canvasSettings, ...s.canvasSettings};
+    if (s.activeFilter !== undefined) activeFilter = s.activeFilter || s.filter;
+    if (s.strength !== undefined) strength = s.strength;
+    if (s.pixelPaletteSize !== undefined) pixelPaletteSize = s.pixelPaletteSize;
   } catch(e){}
 }
 
@@ -1084,34 +1105,19 @@ importSettingsFile.addEventListener("change", e => {
   reader.readAsText(file);
 });
 
-function loadFromStorage(){
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return;
-    const s = JSON.parse(raw);
-    if (s.adjustments) adjustments = {...DEFAULT_ADJ, ...s.adjustments};
-    if (s.filter !== undefined){ activeFilter = s.filter; filteredRaw = null; }
-    if (s.strength !== undefined) strength = s.strength;
-  } catch(e){}
-}
+
 
 document.getElementById("resetAdjBtn").addEventListener("click", () => {
-  historyPush(false); // Save state before resetting
+  historyPush(false); 
   adjustments = {...DEFAULT_ADJ};
-  levels = { black: 0, gamma: 1.0, white: 255 }; // Reset levels
+  levels = { black: 0, gamma: 1.0, white: 255 };
   activeFilter = "none"; strength = 100;
-  
-  // UI Sync
-  Object.keys(sliderEls).forEach(k => { sliderEls[k].input.value = 0; updateSliderLabel(k); });
-  els.levBlack.value = 0; els.levBlackVal.textContent = "0";
-  els.levGamma.value = 1.0; els.levGammaVal.textContent = "1.00";
-  els.levWhite.value = 255; els.levWhiteVal.textContent = "255";
   
   filteredRaw = null;
   resetUIState();
   recomputeFilterBase();
   render();
-  saveToStorage();
+  saveToStorage(); // Save the "Clean" state
 });
 
 // loadFromStorage called after adjustments declared below
@@ -1354,12 +1360,19 @@ ADJ_GROUPS.forEach(group => {
         adjustments[item.key] = Number(input.value);
         updateSliderLabel(item.key);
         scheduleRender();
+      });
+      // Capture Undo state only when user finishes sliding
+      input.addEventListener("change", () => {
+        historyPush(false);
         saveToStorage();
       });
       val.addEventListener("click", () => { 
+        historyPush(false);
         input.value = 0; adjustments[item.key]=0; 
         updateSliderLabel(item.key); scheduleRender(); 
+        saveToStorage();
       });
+      
     });
     els.adjustGroups.appendChild(container);
   });
@@ -1434,15 +1447,19 @@ function setupImage(img){
   sourceImageData   = cloneImageData(originalImageData);  // full-res original, locked
   updateDims();
 
-  // Only reset if no stored state — preserve localStorage values
+  // Apply stored settings or defaults
   const hadStored = localStorage.getItem(LS_KEY);
-  if (!hadStored){
+  if (hadStored) {
+    loadFromStorage();
+  } else {
     activeFilter = "none"; strength = 100; adjustments = {...DEFAULT_ADJ};
-    levels = { black: 0, gamma: 1.0, white: 255 }; // Clear Tonal state
+    levels = { black: 0, gamma: 1.0, white: 255 };
+    canvasSettings = { ratio: "original", margin: 0, color: "#ffffff" };
   }
+  
   filteredRaw = null;
-  resetUIState();
   recomputeFilterBase();
+  resetUIState(); // Force UI to match JS state
   render();
 
   dropzone.style.display = "none";
@@ -1455,14 +1472,35 @@ function setupImage(img){
 }
 
 function resetUIState(){
+  // 1. Filters & Strength
   document.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b.dataset.id===activeFilter));
   els.strength.value = strength;
   els.strengthVal.textContent = strength + "%";
   els.strengthBox.classList.toggle("show", activeFilter!=="none");
-    Object.keys(sliderEls).forEach(k => {
-    sliderEls[k].input.value = adjustments[k] ?? 0;
-    updateSliderLabel(k);
+  pixelPaletteBox.style.display = PIXEL_FILTERS.has(activeFilter) ? "block" : "none";
+  
+  // 2. Adjustments
+  Object.keys(sliderEls).forEach(k => {
+    if (adjustments[k] !== undefined) {
+      sliderEls[k].input.value = adjustments[k];
+      updateSliderLabel(k);
+    }
   });
+
+  // 3. Tonal Levels
+  els.levBlack.value = levels.black;
+  els.levBlackVal.textContent = levels.black;
+  els.levGamma.value = levels.gamma;
+  els.levGammaVal.textContent = levels.gamma.toFixed(2);
+  els.levWhite.value = levels.white;
+  els.levWhiteVal.textContent = levels.white;
+
+  // 4. Canvas Settings
+  cvMarginEl.value = canvasSettings.margin;
+  cvMarginVal.textContent = canvasSettings.margin + "%";
+  cvColorEl.value = canvasSettings.color;
+  document.getElementById("cvColorHex").textContent = canvasSettings.color;
+  document.querySelectorAll(".ratio-btn").forEach(b => b.classList.toggle("active", b.dataset.ratio === canvasSettings.ratio));
 }
 
 /* ---------- Filter selection ---------- */
@@ -1647,30 +1685,18 @@ document.getElementById("autoLevelsBtn").addEventListener("click", runAutoLevels
 
 function restoreEntry(entry){
   adjustments = {...entry.adjustments};
-  if (entry.levels) levels = {...entry.levels}; // Restore levels state
+  if (entry.levels) levels = {...entry.levels};
   activeFilter = entry.filter;
   strength = entry.strength;
-  
-  // Update Tonal Sliders UI
-  if (els.levBlack) {
-    els.levBlack.value = levels.black;
-    els.levBlackVal.textContent = levels.black;
-    els.levGamma.value = levels.gamma;
-    els.levGammaVal.textContent = levels.gamma.toFixed(2);
-    els.levWhite.value = levels.white;
-    els.levWhiteVal.textContent = levels.white;
-  }
-  // Restore pixels: use entry snapshot if destructive, else find last destructive in stack
+  // Restore pixels if it was a destructive step (crop/rotate)
   if (entry.imageData){
     originalImageData = new ImageData(new Uint8ClampedArray(entry.imageData), entry.imageW, entry.imageH);
-  } else {
-    // Find most recent destructive snapshot below this point — already in originalImageData
-    // No pixel change needed, just re-render with restored state
+    canvas.width = originalImageData.width;
+    canvas.height = originalImageData.height;
+    cropOverlay.width = originalImageData.width + (OVERLAY_PADDING * 2);
+    cropOverlay.height = originalImageData.height + (OVERLAY_PADDING * 2);
   }
-  canvas.width = originalImageData.width;
-  canvas.height = originalImageData.height;
-  cropOverlay.width = originalImageData.width;
-  cropOverlay.height = originalImageData.height;
+  
   filteredRaw = null;
   resetUIState();
   recomputeFilterBase();
@@ -1678,18 +1704,21 @@ function restoreEntry(entry){
   updateDims();
   autoFitZoom();
   updateUndoRedoBtns();
+  saveToStorage();
 }
 
 els.undoBtn.addEventListener("click", () => {
   if (!undoStack.length) return;
-  redoStack.push(historySnapshot(!!originalImageData));
+  // Push CURRENT state to redo stack before restoring (State-only, no pixels)
+  redoStack.push(historySnapshot(false)); 
   const entry = undoStack.pop();
   restoreEntry(entry);
 });
 
 els.redoBtn.addEventListener("click", () => {
   if (!redoStack.length) return;
-  undoStack.push(historySnapshot(!!originalImageData));
+  // Push CURRENT state to undo stack before restoring (State-only, no pixels)
+  undoStack.push(historySnapshot(false));
   const entry = redoStack.pop();
   restoreEntry(entry);
 });
@@ -1825,12 +1854,14 @@ function render(){
 /* ---------- Reset ---------- */
 els.resetBtn.addEventListener("click", () => {
   if (!sourceImageData) return;
+  
+  // 1. Clear Storage and Stacks
+  localStorage.removeItem(LS_KEY);
   undoStack = []; redoStack = []; updateUndoRedoBtns();
+  
+  // 2. Reset Logic Variables
   flipH = false; rotateDeg = 0; cropRatio = null;
   cropping = false; cropRect = null; cropStart = null; activeHandle = null;
-  els.cropBtn.classList.remove("cropping-active");
-  els.cropBtn.textContent = "Crop";
-  stageEl.classList.remove("frame-mode");
   
   originalImageData = cloneImageData(sourceImageData);
   actualWidth  = sourceFullImg ? sourceFullImg.naturalWidth  : originalImageData.width;
@@ -2584,26 +2615,25 @@ function pushLevelsHistory() {
 }
 
 els.levBlack.addEventListener("input", () => {
-  pushLevelsHistory();
   levels.black = Number(els.levBlack.value);
   els.levBlackVal.textContent = levels.black;
   scheduleRender();
-  saveToStorage();
 });
+els.levBlack.addEventListener("change", () => { historyPush(false); saveToStorage(); });
+
 els.levGamma.addEventListener("input", () => {
-  pushLevelsHistory();
   levels.gamma = Number(els.levGamma.value);
   els.levGammaVal.textContent = levels.gamma.toFixed(2);
   scheduleRender();
-  saveToStorage();
 });
+els.levGamma.addEventListener("change", () => { historyPush(false); saveToStorage(); });
+
 els.levWhite.addEventListener("input", () => {
-  pushLevelsHistory();
   levels.white = Number(els.levWhite.value);
   els.levWhiteVal.textContent = levels.white;
   scheduleRender();
-  saveToStorage();
 });
+els.levWhite.addEventListener("change", () => { historyPush(false); saveToStorage(); });
 
 </script>
 </body>
