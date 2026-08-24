@@ -176,7 +176,7 @@
   .dropzone p { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
 
   /* Sidebar */
-  aside {
+    aside {
     width: 320px; flex-shrink: 0; border-left: 1px solid var(--border);
     background: var(--panel); overflow-y: auto; padding: 16px;
     display: flex; flex-direction: column; gap: 20px;
@@ -236,9 +236,9 @@
     main { flex-direction: column; }
     aside {
       width: 100%; border-left: none; border-top: 1px solid var(--border);
-      height: 46vh; padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+      height: 35vh; padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
     }
-    .stage { padding: 12px; height: 54vh; }
+    .stage { padding: 12px; height: 65vh; }
     .filter-grid { grid-template-columns: 1fr 1fr; }
     header { padding: 8px 10px; gap: 6px; }
     .brand { flex-shrink: 0; }
@@ -283,7 +283,6 @@
       <button id="cropBtn" class="ghost" style="display:none">Crop</button>
       <button id="cancelCropBtn" class="ghost" style="display:none;color:var(--muted);">✕ Cancel</button>
      <button id="flipBtn" class="ghost" style="display:none">Flip</button>
-      <button id="frameBtn" class="ghost" style="display:none">Canvas</button>
       <button id="exportJpgBtn" class="primary" style="display:none">Export JPG</button>
       <button id="exportPngBtn" class="ghost" style="display:none">Export PNG</button>
     </div>
@@ -316,6 +315,7 @@
     <aside id="sidebar" style="display:none">
         <div class="mobile-tabs">
         <button id="tabAdjust" class="active">Adjust</button>
+        <button id="tabExport">Export</button>
         <button id="tabFrame">Canvas</button>
         <button id="tabFilters">Filters</button>
       </div>
@@ -323,38 +323,7 @@
             <div class="pane pane-adjust active" id="paneAdjust">
                 <div class="section-title">Adjustments</div>
         <div class="hint" style="margin-top:-6px;margin-bottom:10px;">Press <kbd style="font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:3px;background:var(--panel-2);">\</kbd> or tap and hold to see before / after</div>
-                <div style="margin-bottom:8px; padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Export Size</div>
-                    <div style="display:flex;gap:4px;margin-bottom:6px;">
-            <button id="expSize820"  class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 2px;">1080</button>
-            <button id="expSize2048" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 2px;">2048</button>
-            <button id="expSizeFull" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 2px;border-color:var(--accent);background:rgba(245,158,11,.12);color:var(--accent);">Full</button>
-            <button id="expSizeCustom" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 2px;">Custom</button>
-          </div>
-          <div id="customSizeRow" style="display:none;align-items:center;gap:6px;">
-            <input type="number" id="customSizePx" min="100" max="8000" placeholder="px on long edge"
-              style="flex:1;font-size:11px;padding:4px 6px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--fg);" />
-            <span style="font-size:11px;color:var(--muted);">px</span>
-          </div>
-        </div>
-                <div style="padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;">
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
-            <span style="font-size:11px;color:var(--muted);white-space:nowrap;">JPG Q</span>
-            <input type="range" id="jpgQuality" min="80" max="100" value="92" style="flex:1;" />
-            <span id="jpgQualityVal" style="font-size:11px;color:var(--muted);min-width:28px;text-align:right;">92%</span>
-            <button id="exifBtn" class="ghost active" style="padding:3px 7px;font-size:10px;border-color:var(--accent);background:rgba(245,158,11,.12);color:var(--accent);white-space:nowrap;">EXIF <strong id="exifStatus">ON</strong></button>
-          </div>
-          <div style="display:flex;gap:5px;">
-            <button id="exportJpgBtn2" class="primary" style="flex:1;justify-content:center;font-size:12px;padding:7px 4px;">Export JPG</button>
-            <button id="exportPngBtn2" class="ghost" style="flex:1;justify-content:center;font-size:12px;padding:7px 4px;">Export PNG</button>
-          </div>
-        </div>
-        <div style="margin-bottom:12px; padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">Export Filename</div>
-          <input type="text" id="exportNameInput"
-            style="width:100%;box-sizing:border-box;font-size:11px;padding:5px 7px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--fg);" />
-          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Extension added automatically on export.</div>
-        </div>
+                
         <div id="tonalSuite" style="margin-bottom:16px; padding:10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
   <div class="section-title" style="margin:0;">Histogram</div>
@@ -376,18 +345,56 @@
   </div>
 </div>
         <div id="adjustGroups"></div>
-          <div style="display:flex;gap:6px;margin-bottom:8px;">
-          <button id="exportSettingsBtn" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 4px;">↓ Export Settings</button>
-          <button id="importSettingsBtn" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 4px;">↑ Import Settings</button>
-          <input type="file" id="importSettingsFile" accept=".json" style="display:none;" />
-        </div>
                 <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
           <button id="resetAdjBtn" class="ghost" style="font-size:11px;padding:4px 10px;">Reset all to default</button>
         </div>
         <div class="hint">Tap a value to reset that slider.</div>
+            </div>
+      <div class="pane pane-export" id="paneExport">
+        <div class="section-title">Export</div>
+        <div style="margin-bottom:8px; padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Export Size</div>
+          <div style="display:flex;gap:4px;margin-bottom:6px;">
+            <button id="expSize820"  class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 2px;">1080</button>
+            <button id="expSize2048" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 2px;">2048</button>
+            <button id="expSizeFull" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 2px;border-color:var(--accent);background:rgba(245,158,11,.12);color:var(--accent);">Full</button>
+            <button id="expSizeCustom" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 2px;">Custom</button>
+          </div>
+          <div id="customSizeRow" style="display:none;align-items:center;gap:6px;">
+            <input type="number" id="customSizePx" min="100" max="8000" placeholder="px on long edge"
+              style="flex:1;font-size:11px;padding:4px 6px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--fg);" />
+            <span style="font-size:11px;color:var(--muted);">px</span>
+          </div>
+        </div>
+        <div style="padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;">
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+            <span style="font-size:11px;color:var(--muted);white-space:nowrap;">JPG Q</span>
+            <input type="range" id="jpgQuality" min="80" max="100" value="92" style="flex:1;" />
+            <span id="jpgQualityVal" style="font-size:11px;color:var(--muted);min-width:28px;text-align:right;">92%</span>
+            <button id="exifBtn" class="ghost active" style="padding:3px 7px;font-size:10px;border-color:var(--accent);background:rgba(245,158,11,.12);color:var(--accent);white-space:nowrap;">EXIF <strong id="exifStatus">ON</strong></button>
+          </div>
+          <div style="display:flex;gap:5px;">
+            <button id="exportJpgBtn2" class="primary" style="flex:1;justify-content:center;font-size:12px;padding:7px 4px;">Export JPG</button>
+            <button id="exportPngBtn2" class="ghost" style="flex:1;justify-content:center;font-size:12px;padding:7px 4px;">Export PNG</button>
+          </div>
+        </div>
+        <div style="margin-bottom:12px; padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">Export Filename</div>
+          <input type="text" id="exportNameInput"
+            style="width:100%;box-sizing:border-box;font-size:11px;padding:5px 7px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--fg);" />
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Extension added automatically on export.</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <button id="exportSettingsBtn" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 4px;">↓ Save Settings</button>
+          <button id="importSettingsBtn" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 4px;">↑ Load Settings</button>
+          <input type="file" id="importSettingsFile" accept=".json" style="display:none;" />
+        </div>
       </div>
             <div class="pane pane-frame" id="paneFrame">
-  <div class="section-title">Canvas & Ratio</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <div class="section-title" style="margin:0;">Canvas & Ratio</div>
+    <button id="frameModeToggle" class="ghost" style="font-size:11px;padding:4px 10px;">Frame Mode</button>
+  </div>
   <div class="frame-panel">
     <div class="row" style="flex-wrap:wrap;gap:4px;margin-bottom:12px;">
       <button class="ghost ratio-btn active" data-ratio="original">Original</button>
@@ -411,12 +418,8 @@
   </div>
   <div class="hint">The border and ratio are applied non-destructively. What you see is exactly what will export.</div>
   </div>
-  <div class="pane pane-filters" id="paneFilters">
-        <div>
-          <div class="section-title">Filters</div>
-          <div class="filter-grid" id="filterGrid"></div>
-        </div>
-        <div class="strength-box" id="strengthBox" style="margin-top:16px">
+    <div class="pane pane-filters" id="paneFilters">
+        <div class="strength-box" id="strengthBox" style="margin-bottom:12px">
           <div class="slider-row" style="margin-bottom:0">
             <div class="slider-head">
               <label>Filter strength</label>
@@ -424,7 +427,10 @@
             </div>
             <input type="range" id="strength" min="0" max="100" value="100" />
           </div>
-                    <div class="hint">Blend the filter over your original — subtle to strong.</div>
+          </div>
+        <div>
+          <div class="section-title">Filters</div>
+          <div class="filter-grid" id="filterGrid"></div>
         </div>
         <div id="pixelPaletteBox" style="display:none;margin-top:12px;padding:8px 10px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;">
           <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Palette colours</div>
@@ -1138,8 +1144,8 @@ function applyZoom(z){
   canvasWrap.style.width  = newW + "px";
   canvasWrap.style.height = newH + "px";
   
-  cropOverlay.style.width  = (newW + OVERLAY_PADDING * 2 * (newW/baseW)) + "px";
-  cropOverlay.style.height = (newH + OVERLAY_PADDING * 2 * (newH/baseH)) + "px";
+  cropOverlay.style.width  = (newW + OVERLAY_PADDING * 2) + "px";
+  cropOverlay.style.height = (newH + OVERLAY_PADDING * 2) + "px";
 }
 
 function autoFitZoom(){
@@ -1314,24 +1320,8 @@ FILTERS.forEach(f => {
 
 /* ---------- Build adjustment sliders ---------- */
 const sliderEls = {};
-els.tabFrame.addEventListener("click", () => {
-  document.querySelectorAll(".mobile-tabs button").forEach(b => b.classList.remove("active"));
-  document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
-  els.tabFrame.classList.add("active");
-  els.paneFrame.classList.add("active");
-});
+// tabFrame click handled by switchTab below
 
-els.frameBtn.addEventListener("click", () => {
-  stageEl.classList.toggle("frame-mode");
-  els.frameBtn.classList.toggle("primary");
-  els.frameBtn.classList.toggle("ghost");
-  if (window.innerWidth <= 860) {
-    document.querySelectorAll(".mobile-tabs button").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
-    els.tabFrame.classList.add("active");
-    els.paneFrame.classList.add("active");
-  }
-});
 ADJ_GROUPS.forEach(group => {
   const gl = document.createElement("div");
   gl.className = "group-label";
@@ -1451,7 +1441,7 @@ function setupImage(img){
   dropzone.style.display = "none";
   canvasWrap.style.display = "block";
   sidebar.style.display = "flex";
-  [els.newBtn, els.undoBtn, els.redoBtn, els.cropBtn, els.flipBtn, els.rotateBtn, els.frameBtn, els.resetBtn, els.exportPngBtn, els.exportJpgBtn].forEach(b => b.style.display = "inline-flex");
+    [els.newBtn, els.undoBtn, els.redoBtn, els.cropBtn, els.flipBtn, els.rotateBtn, els.resetBtn, els.exportPngBtn, els.exportJpgBtn].forEach(b => b.style.display = "inline-flex");
   stageOverlay.classList.add("visible");
   autoFitZoom();
   syncExportName();
@@ -2003,20 +1993,58 @@ function renderForExport(){
   if (exportSize === "2048") targetLimit = 2048;
   if (exportSize === "custom") targetLimit = Math.max(100, Math.min(8000, Number(customSizePx.value) || 2048));
 
-  let finalScale = 1.0;
-  if (Math.max(canvasW, canvasH) > targetLimit) {
-    finalScale = targetLimit / Math.max(canvasW, canvasH);
-  }
-
+    // Always scale to target — both up and down
+  let finalScale = targetLimit === Infinity ? 1.0 : targetLimit / Math.max(canvasW, canvasH);
   const finalW = Math.round(canvasW * finalScale);
   const finalH = Math.round(canvasH * finalScale);
   const finalPhotoW = pw * finalScale;
   const finalPhotoH = ph * finalScale;
 
-  // 5. Create Export Canvas
+  // 5. Create Export Canvas — multi-step upscale for best quality
   const off = document.createElement("canvas");
   off.width = finalW; off.height = finalH;
   const offCtx = off.getContext("2d", {willReadFrequently:true});
+
+  // Multi-step upscale: if enlarging >1.5x, step through intermediate sizes (max 2x per step)
+  // This gives significantly sharper results than single-step bilinear
+  if (finalScale > 1.5){
+    // Build source canvas at original size first
+    const src = document.createElement("canvas");
+    src.width = canvasW; src.height = canvasH;
+    const srcCtx = src.getContext("2d");
+    srcCtx.imageSmoothingEnabled = true;
+    srcCtx.imageSmoothingQuality = "high";
+    // Draw the photo portion at original size
+    srcCtx.fillStyle = canvasSettings?.color || "#ffffff";
+    srcCtx.fillRect(0, 0, canvasW, canvasH);
+    srcCtx.drawImage(sourceFullImg,
+      Math.round((cropRatio||{x:0}).x * sourceFullImg.naturalWidth),
+      Math.round((cropRatio||{y:0}).y * sourceFullImg.naturalHeight),
+      Math.round((cropRatio||{w:1}).w * sourceFullImg.naturalWidth),
+      Math.round((cropRatio||{h:1}).h * sourceFullImg.naturalHeight),
+      (canvasW - pw) / 2, (canvasH - ph) / 2, pw, ph
+    );
+    // Step up in 2x increments
+    let cur = src;
+    let curW = canvasW, curH = canvasH;
+    while (curW < finalW * 0.75){
+      const nextW = Math.min(Math.round(curW * 2), finalW);
+      const nextH = Math.min(Math.round(curH * 2), finalH);
+      const step = document.createElement("canvas");
+      step.width = nextW; step.height = nextH;
+      const stepCtx = step.getContext("2d");
+      stepCtx.imageSmoothingEnabled = true;
+      stepCtx.imageSmoothingQuality = "high";
+      stepCtx.drawImage(cur, 0, 0, nextW, nextH);
+      cur = step; curW = nextW; curH = nextH;
+    }
+    offCtx.imageSmoothingEnabled = true;
+    offCtx.imageSmoothingQuality = "high";
+    offCtx.drawImage(cur, 0, 0, finalW, finalH);
+  } else {
+    offCtx.imageSmoothingEnabled = true;
+    offCtx.imageSmoothingQuality = "high";
+  }
 
   // 6. Background
   offCtx.fillStyle = canvasSettings.color;
@@ -2390,8 +2418,21 @@ function drawCropOverlay(){
   cropCtx.beginPath(); cropCtx.moveTo(midX - 10, oy+h); cropCtx.lineTo(midX + 10, oy+h); cropCtx.stroke();
   // Left
   cropCtx.beginPath(); cropCtx.moveTo(ox, midY - 10); cropCtx.lineTo(ox, midY + 10); cropCtx.stroke();
-  // Right
+    // Right
   cropCtx.beginPath(); cropCtx.moveTo(ox+w, midY - 10); cropCtx.lineTo(ox+w, midY + 10); cropCtx.stroke();
+
+  // 5. Dimension + ratio label
+  const scaleX = (actualWidth || originalImageData.width) / originalImageData.width;
+  const scaleY = (actualHeight || originalImageData.height) / originalImageData.height;
+  const dispW = Math.round(w * scaleX);
+  const dispH = Math.round(h * scaleY);
+  const ratio = calcRatioLabel(dispW, dispH);
+  const label = dispW + " × " + dispH + " ( " + ratio + " ) ";
+  cropCtx.font = "bold 11px system-ui, sans-serif";
+  cropCtx.fillStyle = "rgba(0,0,0,0.55)";
+  cropCtx.fillRect(ox + 4, oy + h - 22, cropCtx.measureText(label).width + 10, 18);
+  cropCtx.fillStyle = "#ffffff";
+  cropCtx.fillText(label, ox + 9, oy + h - 8);
 }
 
 function applyCrop(){
@@ -2453,18 +2494,30 @@ const tabFilters = document.getElementById("tabFilters");
 const tabAdjust = document.getElementById("tabAdjust");
 const paneFilters = document.getElementById("paneFilters");
 const paneAdjust = document.getElementById("paneAdjust");
-tabFilters.addEventListener("click", () => {
+const tabExport  = document.getElementById("tabExport");
+const paneExport = document.getElementById("paneExport");
+
+function switchTab(tabEl, paneEl){
   document.querySelectorAll(".mobile-tabs button").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
-  tabFilters.classList.add("active");
-  paneFilters.classList.add("active");
+  tabEl.classList.add("active");
+  paneEl.classList.add("active");
+}
+
+document.getElementById("frameModeToggle").addEventListener("click", () => {
+  stageEl.classList.toggle("frame-mode");
+  const btn = document.getElementById("frameModeToggle");
+  const on = stageEl.classList.contains("frame-mode");
+  btn.style.borderColor = on ? "var(--accent)" : "";
+  btn.style.background  = on ? "rgba(245,158,11,.12)" : "";
+  btn.style.color       = on ? "var(--accent)" : "";
+  btn.textContent       = on ? "☑ Frame Mode" : "☐ Frame Mode";
 });
-tabAdjust.addEventListener("click", () => {
-  document.querySelectorAll(".mobile-tabs button").forEach(b => b.classList.remove("active"));
-  document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
-  tabAdjust.classList.add("active");
-  paneAdjust.classList.add("active");
-});
+
+tabFilters.addEventListener("click", () => switchTab(tabFilters, paneFilters));
+tabAdjust.addEventListener("click",  () => switchTab(tabAdjust,  paneAdjust));
+tabExport.addEventListener("click",  () => switchTab(tabExport,  paneExport));
+els.tabFrame.addEventListener("click", () => switchTab(els.tabFrame, els.paneFrame));
 function injectExif(newJpgBase64, originalBytes) {
   const bin = atob(newJpgBase64.split(',')[1]);
   const newBytes = new Uint8Array(bin.length);
