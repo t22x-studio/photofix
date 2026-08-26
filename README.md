@@ -23,6 +23,7 @@ A lightning-fast, privacy-first, web-based photo editor that runs **100% in your
     *   **Surface Smooth:** Edge-preserving spatial filter for skin smoothing, blemish cleanup, and noise removal.
     *   Brightness, Contrast, Highlights, Darkness (Shadows), Saturation, Warmth, Red, Green, Blue, Tint, Clarity, Blur, Fade, Vignette, and Grain.
     *   Logarithmic RGB + Luminance live histogram with **Auto Levels** and interactive Black Point, Midtones (Gamma), and White Point controls.
+    *   Bokeh & Focus Area:** Soft optical background blur with an adjustable focus zone to make your subject stand out.
 *   📐 **Pro Layouts & Framing:**
     *   Interactive crop with Apple-style corner handles, snap-to-boundary logic, and arrow key fine-tuning.
     *   Non-destructive **Border Padding (0–20%)** with color picker and aspect ratio presets (Original, 1:1, 4:5, 2:3, 3:2, 16:9, 9:16).
@@ -92,6 +93,7 @@ This project is open-source and protected under the **MIT License**.
     *   **表面平滑 (Surface Smooth):** 邊緣保留空間濾波技術，專用於平滑膚質、去除瑕疵與濾鏡噪點。
     *   亮度、對比、高光、陰影、飽和度、色溫、紅、綠、藍、色調 (Tint)、清晰度、模糊、褪色、暈影與粗糙顆粒感。
     *   對數 RGB + 亮度即時直方圖，配備 **自動色階** 及互動式黑點、中間調 (Gamma)、白點控制。
+    *   景深模糊 (Bokeh) 與焦點範圍:** 柔化背景散景效果，並可自訂主體清晰範圍，讓相片焦點更突出。
 *   📐 **專業裁切與版面設計:**
     *   專業級裁切手柄，具備邊界吸附邏輯與方向鍵微調（支援 Shift 鍵 10px 步進）。
     *   非破壞性 **邊框邊距 (0–20%)** 與取色盤，支援標準比例（原始、1:1、4:5、2:3、3:2、16:9、9:16）。
