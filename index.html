@@ -10,6 +10,17 @@
   type="image/svg+xml"
   href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50' y='75' text-anchor='middle' font-size='80'%3E%26%23x2365;%3C/text%3E%3C/svg%3E"
 >
+
+<!-- PWA & iOS Home Screen Standalone Support -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Photo Helper" />
+<meta name="application-name" content="Photo Helper" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23161311'/%3E%3Ctext x='50' y='72' text-anchor='middle' font-size='70' fill='%23f59e0b'%3E%26%23x2365;%3C/text%3E%3C/svg%3E" />
+
+<!-- Single-File Inline Web App Manifest -->
+<link rel="manifest" href='data:application/manifest+json,{"name":"Photo Helper","short_name":"PhotoHelper","display":"standalone","background_color":"#0c0a09","theme_color":"#0c0a09"}' />
 <style>
   :root {
     --bg: #0c0a09;
@@ -373,7 +384,7 @@
   
   <div class="slider-row" style="margin-bottom:8px;">
     <div class="slider-head"><label>Black Point</label><span class="val" id="levBlackVal">0</span></div>
-    <input type="range" id="levBlack" min="0" max="100" value="0" />
+    <input type="range" id="levBlack" min="-50" max="100" value="0" />
   </div>
   <div class="slider-row" style="margin-bottom:8px;">
     <div class="slider-head"><label>Midtones (Gamma)</label><span class="val" id="levGammaVal">1.0</span></div>
@@ -381,7 +392,7 @@
   </div>
   <div class="slider-row" style="margin-bottom:0;">
     <div class="slider-head"><label>White Point</label><span class="val" id="levWhiteVal">255</span></div>
-    <input type="range" id="levWhite" min="150" max="255" value="255" />
+    <input type="range" id="levWhite" min="150" max="305" value="255" />
   </div>
 </div>
 <div id="hintReset" class="hint">Tap a value to reset that slider.</div>
@@ -520,7 +531,7 @@ const TRANSLATIONS = {
     brightness: "Brightness", contrast: "Contrast", highlight: "Highlights", darkness: "Darkness",
     saturation: "Saturation", warmth: "Warmth", red: "Red", green: "Green", blue: "Blue", tint: "Tint",
     selTolerance: "Tolerance", selPop: "Pop", selDesat: "Desaturate Background",
-    clarity: "Clarity", blur: "Blur", smooth: "Smooth", fade: "Fade", vignette: "Vignette", grain: "Grain",
+    clarity: "Clarity", blur: "Blur", bokeh: "Bokeh", bokehRadius: "Bokeh Focus", smooth: "Smooth", fade: "Fade", vignette: "Vignette", grain: "Grain",
     targetCol: "Target Color", sampleImg: "Sample Image", sampling: "Cancel",
     canvasTitle: "Canvas & Ratio", frameMode: "Frame Mode", original: "Original", border: "Border", color: "Color",
     canvasHint: "The border and ratio are applied non-destructively. What you see is exactly what will export.",
@@ -543,7 +554,7 @@ const TRANSLATIONS = {
     brightness: "亮度", contrast: "對比", highlight: "高光", darkness: "陰影",
     saturation: "飽和度", warmth: "色溫", red: "紅", green: "綠", blue: "藍", tint: "Tint",
     selTolerance: "容差", selPop: "色彩突出", selDesat: "背景飽和度",
-    clarity: "清晰度", blur: "模糊", smooth: "平滑", fade: "褪色", vignette: "暈影", grain: "粗糙",
+    clarity: "清晰度", blur: "模糊", bokeh: "景深模糊", bokehRadius: "景深範圍", smooth: "平滑", fade: "褪色", vignette: "暈影", grain: "粗糙",
     targetCol: "目標顏色", sampleImg: "顏色取樣", sampling: "取消",
     canvasTitle: "版面與比例", frameMode: "邊框模式", original: "原始比例", border: "邊框", color: "邊框顏色",
     canvasHint: "邊框與比例為非破壞性修改。預覽與儲存版本相同",
@@ -563,7 +574,8 @@ const DEFAULT_ADJ = {
   brightness:0, contrast:0, highlight:0, darkness:0, warmth:0, tint:0,
   blur:0, vignette:0, red:0, green:0, blue:0,
   saturation:0, clarity:0, fade:0, grain:0,
-  smooth:0, selTolerance:20, selDesat:0, selPop:0, selColor: "#ff0000"
+  smooth:0, selTolerance:20, selDesat:0, selPop:0, selColor: "#ff0000",
+  bokeh:0, bokehRadius:35
 };
 
 function cloneImageData(src){
@@ -665,17 +677,57 @@ function boxBlur(src, radius){
   }
   return new ImageData(out,w,h);
 }
+function applyBokeh(src, strength, focusArea) {
+  if (strength <= 0) return src;
+  const w = src.width, h = src.height;
+  const out = cloneImageData(src), d = out.data, s = src.data;
+  
+  // DSP Self-Calibrating Scale: Linear ratio against preview base (820px)
+  const resScale = Math.max(1, w / 820);
+  
+  // 3-Pass Gaussian Radius Math: Splitting into 3 sub-passes produces pure optical silk
+  const passRadius = Math.max(1, Math.round(((strength / 100) * 14) * resScale));
+  
+  // 3-Pass Central Limit Theorem Gaussian Convergence (Zero blockiness)
+  let blurred = boxBlur(cloneImageData(src), passRadius);
+  blurred = boxBlur(blurred, passRadius);
+  blurred = boxBlur(blurred, passRadius);
+  const b = blurred.data;
 
-function applyVignette(src, strength){
-  if (strength<=0) return src;
-  const s=strength/100, out=cloneImageData(src), d=out.data;
-  const w=src.width, h=src.height, cx=w/2, cy=h/2;
-  const maxDist=Math.sqrt(cx*cx+cy*cy);
-  for (let y=0;y<h;y++){
-    for (let x=0;x<w;x++){
-      const dx=x-cx, dy=y-cy, dist=Math.sqrt(dx*dx+dy*dy)/maxDist;
-      const t=Math.max(0,(dist-0.4)/0.6), f=Math.max(0,1-s*t*t);
-      const i=(y*w+x)*4; d[i]*=f; d[i+1]*=f; d[i+2]*=f;
+  // At 0% focus area, blur 100% of the entire image uniformly
+  if (focusArea <= 0) {
+    for (let i = 0; i < d.length; i += 4) {
+      d[i]   = b[i];
+      d[i+1] = b[i+1];
+      d[i+2] = b[i+2];
+    }
+    return out;
+  }
+
+  const cx = w / 2, cy = h / 2;
+  const maxDist = Math.sqrt(cx * cx + cy * cy);
+  // Optical focal safe zone
+  const innerRadius = (focusArea / 100) * (maxDist * 0.7);
+  const transitionRange = Math.max(1, maxDist * 0.35);
+
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    const dy = y - cy;
+    for (let x = 0; x < w; x++) {
+      const dx = x - cx;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      let t = 0;
+      if (dist > innerRadius) {
+        t = Math.min(1, (dist - innerRadius) / transitionRange);
+        // Smooth Hermite optical curve for organic depth-of-field transition
+        t = t * t * (3 - 2 * t);
+      }
+
+      const i = (row + x) * 4;
+      d[i]   = s[i]   + (b[i]   - s[i])   * t;
+      d[i+1] = s[i+1] + (b[i+1] - s[i+1]) * t;
+      d[i+2] = s[i+2] + (b[i+2] - s[i+2]) * t;
     }
   }
   return out;
@@ -1214,9 +1266,10 @@ const ADJ_GROUPS = [
     [ {key:"blue", label:"Blue"},{key:"tint", label:"Tint"} ]
   ]},
   { label:"Effects", items:[
-    [ {key:"clarity", label:"Clarity", min:0, max:100}, {key:"blur", label:"Blur", min:0, max:20} ],
-    [ {key:"fade", label:"Fade", min:0, max:100}, {key:"vignette", label:"Vignette", min:0, max:100} ],
-    [ {key:"smooth", label:"Smooth", min:0, max:100}, {key:"grain", label:"Grain", min:0, max:100} ],
+    [ {key:"clarity", label:"Clarity", min:0, max:100}, {key:"smooth", label:"Smooth", min:0, max:100} ],
+    [ {key:"bokeh", label:"Bokeh", min:0, max:100}, {key:"bokehRadius", label:"Bokeh Focus", min:0, max:100} ],
+    [ {key:"fade", label:"Fade", min:0, max:100}, {key:"grain", label:"Grain", min:0, max:100} ],
+    [ {key:"vignette", label:"Vignette", min:0, max:100}, {key:"blur", label:"Blur", min:0, max:20} ],
   ]},
   { label:"Color Pop", items:[
     [ {key:"selTolerance", label:"Tolerance", min:1, max:100}, {key:"selPop", label:"Pop", min:-100, max:100} ],
@@ -2104,15 +2157,18 @@ function drawHistogram(imgData) {
     }
   });
 
-  // Level markers — black point, white point, gamma midpoint
+  // Level markers — clamped cleanly to 256px canvas view
+  const bMarker = Math.max(0, Math.min(255, levels.black));
+  const wMarker = Math.max(0, Math.min(255, levels.white));
+
   hCtx.lineWidth = 1;
   hCtx.strokeStyle = "#ff4444";
-  hCtx.beginPath(); hCtx.moveTo(levels.black, 0); hCtx.lineTo(levels.black, 60); hCtx.stroke();
+  hCtx.beginPath(); hCtx.moveTo(bMarker, 0); hCtx.lineTo(bMarker, 60); hCtx.stroke();
 
   hCtx.strokeStyle = "#ffffff";
-  hCtx.beginPath(); hCtx.moveTo(levels.white, 0); hCtx.lineTo(levels.white, 60); hCtx.stroke();
+  hCtx.beginPath(); hCtx.moveTo(wMarker, 0); hCtx.lineTo(wMarker, 60); hCtx.stroke();
 
-  const gPos = levels.black + (levels.white - levels.black) * 0.5;
+  const gPos = Math.max(0, Math.min(255, levels.black + (levels.white - levels.black) * 0.5));
   hCtx.setLineDash([2, 2]); hCtx.strokeStyle = "rgba(255,255,255,0.45)";
   hCtx.beginPath(); hCtx.moveTo(gPos, 10); hCtx.lineTo(gPos, 50); hCtx.stroke();
   hCtx.setLineDash([]);
@@ -2125,6 +2181,7 @@ function render(){
   let photoData = applyAdjustments(filterBase, adjustments);
   if (adjustments.saturation !== 0) photoData = saturate(photoData, 1 + adjustments.saturation/100);
   if (adjustments.clarity > 0)      photoData = applyClarity(photoData, adjustments.clarity);
+  if (adjustments.bokeh > 0)        photoData = applyBokeh(photoData, adjustments.bokeh, adjustments.bokehRadius);
   if (adjustments.blur > 0)         photoData = boxBlur(photoData, adjustments.blur);
   // Fast-Path: Skip only the heavy neighborhood smoothing while moving sliders
   if (!isInteracting && adjustments.smooth > 0) {
@@ -2407,71 +2464,41 @@ function renderForExport(){
   if (exportSize === "2048") targetLimit = 2048;
   if (exportSize === "custom") targetLimit = Math.max(100, Math.min(8000, Number(customSizePx.value) || 2048));
 
-    // Always scale to target — both up and down
+  // Always scale to target — both up and down
   let finalScale = targetLimit === Infinity ? 1.0 : targetLimit / Math.max(canvasW, canvasH);
   const finalW = Math.round(canvasW * finalScale);
   const finalH = Math.round(canvasH * finalScale);
-  const finalPhotoW = pw * finalScale;
-  const finalPhotoH = ph * finalScale;
 
-  // 5. Create Export Canvas — multi-step upscale for best quality
+  // Optical dimensions inside rotated coordinate space
+  const unrotatedPhotoW = (isRotated ? ph : pw) * finalScale;
+  const unrotatedPhotoH = (isRotated ? pw : ph) * finalScale;
+
+  // 5. Create Export Canvas
   const off = document.createElement("canvas");
   off.width = finalW; off.height = finalH;
-  const offCtx = off.getContext("2d", {willReadFrequently:true});
+  const offCtx = off.getContext("2d", { willReadFrequently: true });
+  offCtx.imageSmoothingEnabled = true;
+  offCtx.imageSmoothingQuality = "high";
 
-  // Multi-step upscale: if enlarging >1.5x, step through intermediate sizes (max 2x per step)
-  // This gives significantly sharper results than single-step bilinear
-  if (finalScale > 1.5){
-    // Build source canvas at original size first
-    const src = document.createElement("canvas");
-    src.width = canvasW; src.height = canvasH;
-    const srcCtx = src.getContext("2d");
-    srcCtx.imageSmoothingEnabled = true;
-    srcCtx.imageSmoothingQuality = "high";
-    // Draw the photo portion at original size
-    srcCtx.fillStyle = canvasSettings?.color || "#ffffff";
-    srcCtx.fillRect(0, 0, canvasW, canvasH);
-    srcCtx.drawImage(sourceFullImg,
-      Math.round((cropRatio||{x:0}).x * sourceFullImg.naturalWidth),
-      Math.round((cropRatio||{y:0}).y * sourceFullImg.naturalHeight),
-      Math.round((cropRatio||{w:1}).w * sourceFullImg.naturalWidth),
-      Math.round((cropRatio||{h:1}).h * sourceFullImg.naturalHeight),
-      (canvasW - pw) / 2, (canvasH - ph) / 2, pw, ph
-    );
-    // Step up in 2x increments
-    let cur = src;
-    let curW = canvasW, curH = canvasH;
-    while (curW < finalW * 0.75){
-      const nextW = Math.min(Math.round(curW * 2), finalW);
-      const nextH = Math.min(Math.round(curH * 2), finalH);
-      const step = document.createElement("canvas");
-      step.width = nextW; step.height = nextH;
-      const stepCtx = step.getContext("2d");
-      stepCtx.imageSmoothingEnabled = true;
-      stepCtx.imageSmoothingQuality = "high";
-      stepCtx.drawImage(cur, 0, 0, nextW, nextH);
-      cur = step; curW = nextW; curH = nextH;
-    }
-    offCtx.imageSmoothingEnabled = true;
-    offCtx.imageSmoothingQuality = "high";
-    offCtx.drawImage(cur, 0, 0, finalW, finalH);
-  } else {
-    offCtx.imageSmoothingEnabled = true;
-    offCtx.imageSmoothingQuality = "high";
-  }
-
-  // 6. Background
-  offCtx.fillStyle = canvasSettings.color;
+  // 6. Background Color
+  offCtx.fillStyle = canvasSettings.color || "#ffffff";
   offCtx.fillRect(0, 0, finalW, finalH);
 
-  // 7. Draw Photo Centered at Final Scale
+  // 7. Draw Photo Centered with Correct Coordinate Mapping
   offCtx.save();
-  offCtx.translate(finalW/2, finalH/2);
-  if (rotateDeg) offCtx.rotate(rotateDeg * Math.PI/180);
+  offCtx.translate(finalW / 2, finalH / 2);
+  if (rotateDeg) offCtx.rotate((rotateDeg * Math.PI) / 180);
   if (flipH) offCtx.scale(-1, 1);
-  
-  
-  offCtx.drawImage(sourceFullImg, srcX, srcY, srcW, srcH, -finalPhotoW/2, -finalPhotoH/2, finalPhotoW, finalPhotoH);
+
+  // Draw using unrotated source dimensions into the rotated transform matrix
+  offCtx.drawImage(
+    sourceFullImg,
+    srcX, srcY, srcW, srcH,
+    -unrotatedPhotoW / 2,
+    -unrotatedPhotoH / 2,
+    unrotatedPhotoW,
+    unrotatedPhotoH
+  );
   offCtx.restore();
 
   // 8. Final DSP pass
@@ -2492,6 +2519,7 @@ function renderForExport(){
   result = applyAdjustments(result, adjustments);
   if (adjustments.saturation !== 0) result = saturate(result, 1 + adjustments.saturation/100);
   if (adjustments.clarity > 0)      result = applyClarity(result, adjustments.clarity);
+  if (adjustments.bokeh > 0)        result = applyBokeh(result, adjustments.bokeh, adjustments.bokehRadius);
   if (adjustments.blur > 0)         result = boxBlur(result, Math.round(adjustments.blur * radiusScale));
   if (adjustments.smooth > 0) result = applySurfaceSmooth(result, adjustments.smooth);
   result = applySelectiveColor(result, adjustments.selColor, adjustments.selTolerance, adjustments.selDesat, adjustments.selPop);
@@ -2504,18 +2532,31 @@ function renderForExport(){
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-function triggerDownload(dataURL, filename){
-  if (isIOS){
-    // iOS Safari: <a download> opens tab instead — open directly, user long-presses to save
-    const w = window.open();
-    w.document.write('<img src="' + dataURL + '" style="max-width:100%"><p style="font-family:sans-serif;color:#888;font-size:13px;">Long-press the image and tap Save to Photos or Download.</p>');
-    w.document.title = filename;
-  } else {
-    const link = document.createElement("a");
-    link.download = filename;
-    link.href = dataURL;
-    link.click();
+async function triggerDownload(dataURL, filename) {
+  // Convert DataURL to Blob
+  const res = await fetch(dataURL);
+  const blob = await res.blob();
+  const file = new File([blob], filename, { type: blob.type });
+
+  // Native Mobile / PWA Share Sheet (Direct "Save to Photos" on iOS / Android)
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: filename
+      });
+      return;
+    } catch (err) {
+      // User cancelled share sheet — do nothing
+      if (err.name === "AbortError") return;
+    }
   }
+
+  // Desktop & Fallback Download
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = dataURL;
+  link.click();
 }
 
 els.exportPngBtn.addEventListener("click", () => {
@@ -2967,21 +3008,44 @@ function injectExif(newJpgBase64, originalBytes) {
       if (marker >= 0xE0 && marker <= 0xEF) {
         let seg = originalBytes.slice(offset, offset + 2 + length);
         
-        // Surgical Fix: Reset Orientation tag in APP1 (Exif) segment
+        // Robust TIFF Header Parser (APP1 Exif)
         if (marker === 0xE1 && seg.length > 14) {
-          // Check for "Exif\0\0" header
-          if (seg[4] === 0x45 && seg[5] === 0x78 && seg[6] === 0x69 && seg[7] === 0x66) {
-            const tiffStart = 10;
-            const isLittleEndian = seg[tiffStart] === 0x49; // "II" vs "MM"
+          // Verify "Exif\0\0" signature
+          if (seg[4] === 0x45 && seg[5] === 0x78 && seg[6] === 0x69 && seg[7] === 0x66 && seg[8] === 0x00 && seg[9] === 0x00) {
+            const tiff = 10; // TIFF Header start
+            const isLE = seg[tiff] === 0x49 && seg[tiff + 1] === 0x49; // "II" Little-Endian vs "MM" Big-Endian
             
-            // Search for Orientation tag: 0x0112
-            for (let j = tiffStart; j < seg.length - 12; j++) {
-              let tag = isLittleEndian ? (seg[j+1] << 8 | seg[j]) : (seg[j] << 8 | seg[j+1]);
-              if (tag === 0x0112) {
-                // Value is 8 bytes after tag start. We set to 1.
-                if (isLittleEndian) { seg[j+8] = 0x01; seg[j+9] = 0x00; }
-                else { seg[j+8] = 0x00; seg[j+9] = 0x01; }
-                break; // Found and fixed
+            const read16 = (p) => isLE ? (seg[p] | (seg[p+1] << 8)) : ((seg[p] << 8) | seg[p+1]);
+            const read32 = (p) => isLE ? ((seg[p] | (seg[p+1] << 8) | (seg[p+2] << 16) | (seg[p+3] << 24)) >>> 0) : (((seg[p] << 24) | (seg[p+1] << 16) | (seg[p+2] << 8) | seg[p+3]) >>> 0);
+
+            // Read offset to IFD0
+            const ifd0Offset = read32(tiff + 4);
+            if (ifd0Offset >= 8 && (tiff + ifd0Offset + 2) < seg.length) {
+              const numEntries = read16(tiff + ifd0Offset);
+              let entryPos = tiff + ifd0Offset + 2;
+
+              for (let i = 0; i < numEntries && (entryPos + 12) <= seg.length; i++) {
+                const tag = read16(entryPos);
+                
+                // 1. Force Reset Orientation Tag (0x0112) -> 1 (Normal 0° rotation)
+                if (tag === 0x0112) {
+                  if (isLE) { seg[entryPos + 8] = 0x01; seg[entryPos + 9] = 0x00; }
+                  else { seg[entryPos + 8] = 0x00; seg[entryPos + 9] = 0x01; }
+                }
+
+                // 2. Disconnect legacy thumbnail pointers (0x0201 & 0x0202)
+                if (tag === 0x0201 || tag === 0x0202) {
+                  seg[entryPos + 8] = 0x00; seg[entryPos + 9] = 0x00;
+                  seg[entryPos + 10] = 0x00; seg[entryPos + 11] = 0x00;
+                }
+                
+                entryPos += 12;
+              }
+
+              // Disconnect IFD1 thumbnail offset pointer at the end of IFD0
+              if (entryPos + 4 <= seg.length) {
+                seg[entryPos] = 0x00; seg[entryPos + 1] = 0x00;
+                seg[entryPos + 2] = 0x00; seg[entryPos + 3] = 0x00;
               }
             }
           }
@@ -3029,17 +3093,49 @@ function pushLevelsHistory() {
 els.levBlack.addEventListener("input", () => {
   levels.black = Number(els.levBlack.value);
   els.levBlackVal.textContent = levels.black;
+  els.levBlackVal.classList.toggle("changed", levels.black !== 0);
   scheduleRender();
 });
 els.levGamma.addEventListener("input", () => {
   levels.gamma = Number(els.levGamma.value);
   els.levGammaVal.textContent = levels.gamma.toFixed(2);
+  els.levGammaVal.classList.toggle("changed", Math.abs(levels.gamma - 1.0) > 0.01);
   scheduleRender();
 });
 els.levWhite.addEventListener("input", () => {
   levels.white = Number(els.levWhite.value);
   els.levWhiteVal.textContent = levels.white;
+  els.levWhiteVal.classList.toggle("changed", levels.white !== 255);
   scheduleRender();
+});
+
+// Tap number badge to reset individual Tonal slider
+els.levBlackVal.addEventListener("click", () => {
+  historyPush(false);
+  levels.black = 0;
+  els.levBlack.value = 0;
+  els.levBlackVal.textContent = "0";
+  els.levBlackVal.classList.remove("changed");
+  render();
+  saveToStorage();
+});
+els.levGammaVal.addEventListener("click", () => {
+  historyPush(false);
+  levels.gamma = 1.0;
+  els.levGamma.value = 1.0;
+  els.levGammaVal.textContent = "1.00";
+  els.levGammaVal.classList.remove("changed");
+  render();
+  saveToStorage();
+});
+els.levWhiteVal.addEventListener("click", () => {
+  historyPush(false);
+  levels.white = 255;
+  els.levWhite.value = 255;
+  els.levWhiteVal.textContent = "255";
+  els.levWhiteVal.classList.remove("changed");
+  render();
+  saveToStorage();
 });
 
 function updateLanguageUI() {
