@@ -2295,7 +2295,7 @@ canvas.addEventListener("click", (e) => {
   selColorHex.textContent = hex.toUpperCase();
   
   isSamplingColor = false;
-  eyeDropperBtn.textContent = "Sample Image";
+  eyeDropperBtn.textContent = TRANSLATIONS[currentLang].sampleImg;
   eyeDropperBtn.style.color = "";
   canvas.style.cursor = "";
   scheduleRender();
@@ -2553,9 +2553,10 @@ let dragStartRect = null;
 
 els.cropBtn.addEventListener("click", () => {
   cropping = !cropping;
+  const t = TRANSLATIONS[currentLang];
   if (cropping) {
     els.cropBtn.classList.add("cropping-active");
-    els.cropBtn.textContent = "Apply crop";
+    els.cropBtn.textContent = t.apply;
     els.cancelCropBtn.style.display = "inline-flex";
     cropOverlay.style.display = "block";
     
@@ -2566,7 +2567,7 @@ els.cropBtn.addEventListener("click", () => {
   } else {
     applyCrop();
     els.cropBtn.classList.remove("cropping-active");
-    els.cropBtn.textContent = "Crop";
+    els.cropBtn.textContent = t.crop;
     els.cancelCropBtn.style.display = "none";
     cropOverlay.style.display = "none";
   }
@@ -2575,7 +2576,7 @@ els.cropBtn.addEventListener("click", () => {
 function cancelCrop(){
   cropping = false; cropRect = null; cropStart = null; activeHandle = null;
   els.cropBtn.classList.remove("cropping-active");
-  els.cropBtn.textContent = "Crop";
+  els.cropBtn.textContent = TRANSLATIONS[currentLang].crop;
   els.cancelCropBtn.style.display = "none";
   cropCtx.clearRect(0, 0, cropOverlay.width, cropOverlay.height);
   updateDims();
