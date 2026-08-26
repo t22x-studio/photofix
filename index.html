@@ -121,8 +121,12 @@
     border-radius: 6px;
     box-shadow: 0 24px 60px rgba(0,0,0,.6); 
     touch-action: pan-x pan-y;
-    width: 100%; /* Scale with parent */
-    height: 100%; /* Scale with parent */
+    width: 100%; 
+    height: 100%;
+    /* Fix Peek: Block selection and system menus on canvas */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
   #cropOverlay { 
     position: absolute; 
@@ -231,8 +235,32 @@
 
   .mobile-tabs { display: none; }
 
+  .desktop-nav {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    padding-left: 8px;
+    border-left: 1px solid var(--border);
+  }
+  .desktop-nav button {
+    font-size: 11px;
+    padding: 6px 9px;
+    border-color: rgba(250, 173, 39, 0.456); /* Distinct Amber Border */
+  }
+  .desktop-nav button:hover {
+    border-color: var(--accent);
+    background: rgba(245, 158, 11, 0.12);
+    color: var(--accent);
+  }
+
+  @media (min-width: 861px) {
+    .desktop-nav { display: inline-flex; }
+  }
+
   /* ---------- Mobile ---------- */
   @media (max-width: 860px) {
+    .desktop-nav { display: none !important; }
     main { flex-direction: column; }
     aside {
       width: 100%; border-left: none; border-top: 1px solid var(--border);
@@ -266,7 +294,7 @@
 </head>
 <body>
   <header>
-      <div class="brand">
+    <div class="brand">
       <div class="dot"></div>
       <div class="brand-badge">P:</div>
       <div>
@@ -274,6 +302,7 @@
       </div>
       <span>Image Editor &copy; 2026</span>
     </div>
+    
     <div class="header-actions">
       <button id="newBtn" class="ghost" style="display:none">Open</button>
       <button id="undoBtn" class="ghost" style="display:none;opacity:0.4;" disabled>↺</button>
@@ -282,10 +311,21 @@
       <button id="resetBtn" class="ghost" style="display:none">Reset</button>
       <button id="cropBtn" class="ghost" style="display:none">Crop</button>
       <button id="cancelCropBtn" class="ghost" style="display:none;color:var(--muted);">✕ Cancel</button>
-     <button id="flipBtn" class="ghost" style="display:none">Flip</button>
+      <button id="flipBtn" class="ghost" style="display:none">Flip</button>
       <button id="exportJpgBtn" class="primary" style="display:none">Export JPG</button>
       <button id="exportPngBtn" class="ghost" style="display:none">Export PNG</button>
+
+      <!-- Desktop Jump-to-Section Tabs -->
+      <div id="desktopNav" class="desktop-nav" style="display:none;">
+        <button id="dTabAdjust" class="ghost">Adjust</button>
+        <button id="dTabExport" class="ghost">Export</button>
+        <button id="dTabFrame" class="ghost">Canvas</button>
+        <button id="dTabFilters" class="ghost">Filters</button>
+      </div>
     </div>
+    
+    <!-- Language Toggle -->
+    <button id="langToggle" class="ghost" style="flex-shrink:0; width:38px; height:28px; padding:0; justify-content:center; font-size:11px; font-weight:700;">中/EN</button>
   </header>
 
     <main>
@@ -322,7 +362,7 @@
 
             <div class="pane pane-adjust active" id="paneAdjust">
                 <div class="section-title">Adjustments</div>
-        <div class="hint" style="margin-top:-6px;margin-bottom:10px;">Press <kbd style="font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:3px;background:var(--panel-2);">\</kbd> or tap and hold to see before / after</div>
+        <div id="hintPeek" class="hint" style="margin-top:-6px;margin-bottom:10px;">Press <kbd style="font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:3px;background:var(--panel-2);">\</kbd> or tap and hold to see before / after</div>
                 
         <div id="tonalSuite" style="margin-bottom:16px; padding:10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -344,16 +384,29 @@
     <input type="range" id="levWhite" min="150" max="255" value="255" />
   </div>
 </div>
+<div id="hintReset" class="hint">Tap a value to reset that slider.</div>
         <div id="adjustGroups"></div>
+         
+        <div id="selColorRow" style="padding:10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; margin-bottom:14px; display:none;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+    <span class="section-title" style="margin:0;">Target Color</span>
+    <button id="eyeDropperBtn" class="ghost" style="padding:2px 8px; font-size:11px;">Sample Image</button>
+  </div>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <input type="color" id="selColor" value="#ff0000" style="width:40px; height:30px; border:none; background:none; cursor:pointer;" />
+    <span id="selColorHex" style="font-size:11px; color:var(--muted); font-family:monospace;">#FF0000</span>
+  </div>
+  
+</div>
                 <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
           <button id="resetAdjBtn" class="ghost" style="font-size:11px;padding:4px 10px;">Reset all to default</button>
         </div>
-        <div class="hint">Tap a value to reset that slider.</div>
+       
             </div>
       <div class="pane pane-export" id="paneExport">
         <div class="section-title">Export</div>
         <div style="margin-bottom:8px; padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Export Size</div>
+          <div id="expSz" style="font-size:11px;color:var(--muted);margin-bottom:6px;">Export Size</div>
           <div style="display:flex;gap:4px;margin-bottom:6px;">
             <button id="expSize820"  class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 2px;">1080</button>
             <button id="expSize2048" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 2px;">2048</button>
@@ -368,7 +421,7 @@
         </div>
         <div style="padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;">
           <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
-            <span style="font-size:11px;color:var(--muted);white-space:nowrap;">JPG Q</span>
+            <span id="jpgQ" style="font-size:11px;color:var(--muted);white-space:nowrap;">JPG Quality</span>
             <input type="range" id="jpgQuality" min="80" max="100" value="92" style="flex:1;" />
             <span id="jpgQualityVal" style="font-size:11px;color:var(--muted);min-width:28px;text-align:right;">92%</span>
             <button id="exifBtn" class="ghost active" style="padding:3px 7px;font-size:10px;border-color:var(--accent);background:rgba(245,158,11,.12);color:var(--accent);white-space:nowrap;">EXIF <strong id="exifStatus">ON</strong></button>
@@ -379,10 +432,10 @@
           </div>
         </div>
         <div style="margin-bottom:12px; padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">Export Filename</div>
+          <div id="hintName" style="font-size:11px;color:var(--muted);margin-bottom:5px;">Export Filename</div>
           <input type="text" id="exportNameInput"
             style="width:100%;box-sizing:border-box;font-size:11px;padding:5px 7px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--fg);" />
-          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Extension added automatically on export.</div>
+          <div id="hintExport" style="font-size:10px;color:var(--muted);margin-top:4px;">Extension added automatically on export.</div>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:8px;">
           <button id="exportSettingsBtn" class="ghost" style="flex:1;justify-content:center;font-size:11px;padding:5px 4px;">↓ Save Settings</button>
@@ -406,17 +459,17 @@
       <button class="ghost ratio-btn" data-ratio="9:16">9:16</button>
     </div>
     <div class="row">
-      <label>Border</label>
+      <label id="cBorder">Border</label>
       <input type="range" id="cvMargin" min="0" max="20" value="0" step="0.5" style="flex:1;" />
       <span id="cvMarginVal" style="font-size:11px;color:var(--muted);min-width:30px;text-align:right;">0%</span>
     </div>
     <div class="row">
-      <label>Color</label>
+      <label id="cColor">Color</label>
       <input type="color" id="cvColor" value="#ffffff" style="width:36px;height:28px;border:none;background:none;cursor:pointer;padding:0;" />
       <span id="cvColorHex" style="font-size:11px;color:var(--muted);">#ffffff</span>
     </div>
   </div>
-  <div class="hint">The border and ratio are applied non-destructively. What you see is exactly what will export.</div>
+  <div id="hintCanvas" class="hint">The border and ratio are applied non-destructively. What you see is exactly what will export.</div>
   </div>
     <div class="pane pane-filters" id="paneFilters">
         <div class="strength-box" id="strengthBox" style="margin-bottom:12px">
@@ -453,13 +506,64 @@
 <script>
 "use strict";
 
+const TRANSLATIONS = {
+  en: {
+    adjust: "Adjust", export: "Export", frame: "Canvas", filters: "Filters",
+    open: "Open", rotate: "Rotate", reset: "Reset", crop: "Crop", cancel: "✕ Cancel", apply: "Apply",
+    flip: "Flip", expJpg: "Export JPG", expPng: "Export PNG",
+    dropH: "Load a photo", dropP: "Drag & drop an image here, or tap to browse", dropB: "Choose image",
+    hintPeek: "Press \\ or tap and hold to see before / after",
+    hintReset: "Tap a value to reset that slider.",
+    hist: "Histogram", auto: "Auto", resetAll: "Reset all to default",
+    blackP: "Black Point", midP: "Midtones (Gamma)", whiteP: "White Point",
+    groupLight: "Light", groupColor: "Color", groupColorPop: "Color Pop", groupEffects: "Effects",
+    brightness: "Brightness", contrast: "Contrast", highlight: "Highlights", darkness: "Darkness",
+    saturation: "Saturation", warmth: "Warmth", red: "Red", green: "Green", blue: "Blue", tint: "Tint",
+    selTolerance: "Tolerance", selPop: "Pop", selDesat: "Desaturate Background",
+    clarity: "Clarity", blur: "Blur", smooth: "Smooth", fade: "Fade", vignette: "Vignette", grain: "Grain",
+    targetCol: "Target Color", sampleImg: "Sample Image", sampling: "Cancel",
+    canvasTitle: "Canvas & Ratio", frameMode: "Frame Mode", original: "Original", border: "Border", color: "Color",
+    canvasHint: "The border and ratio are applied non-destructively. What you see is exactly what will export.",
+    expTitle: "Export Settings", expSize: "Export Size", custom: "Custom", expFull:"full", jpgQ: "JPG Quality", exif: "EXIF", 
+    expName: "Export Filename", expHint: "Extension added automatically on export.",
+    saveSet: "↓ Save Settings", loadSet: "↑ Load Settings", filterSet:"Filter Strength",
+    none: "Original", pop: "Pop", soft: "Soft", watercolor: "Watercolor", anime: "Anime", oil: "Oil Paint",
+    bw: "B & W", noir: "Noir", sketch: "Sketch", comic: "Comic", comic2: "Color Comic", pixelA: "Pixel", pixelB: "Pixel Game"
+  },
+  zh: {
+    adjust: "調整", export: "儲存設定", frame: "版面與比例", filters: "濾鏡",
+    open: "開啟", rotate: "旋轉", reset: "重設", crop: "裁切", cancel: "✕ 取消", apply: "套用",
+    flip: "水平翻轉", expJpg: "儲存為JPG", expPng: "儲存為PNG",
+    dropH: "載入相片或圖片", dropP: "將圖片拖放到此處，或點擊瀏覽", dropB: "選擇圖片",
+    hintPeek: "按住 \\ 或長按圖片可查看修改前狀態",
+    hintReset: "點擊數值可重設該滑桿",
+    hist: "直方圖", auto: "自動", resetAll: "全部重置",
+    blackP: "黑點", midP: "中間調 (Gamma)", whiteP: "白點",
+    groupLight: "光效", groupColor: "色彩調整", groupColorPop: "影像效果", groupEffects: "色彩突出效果",
+    brightness: "亮度", contrast: "對比", highlight: "高光", darkness: "陰影",
+    saturation: "飽和度", warmth: "色溫", red: "紅", green: "綠", blue: "藍", tint: "Tint",
+    selTolerance: "容差", selPop: "色彩突出", selDesat: "背景飽和度",
+    clarity: "清晰度", blur: "模糊", smooth: "平滑", fade: "褪色", vignette: "暈影", grain: "粗糙",
+    targetCol: "目標顏色", sampleImg: "顏色取樣", sampling: "取消",
+    canvasTitle: "版面與比例", frameMode: "邊框模式", original: "原始比例", border: "邊框", color: "邊框顏色",
+    canvasHint: "邊框與比例為非破壞性修改。預覽與儲存版本相同",
+    expTitle: "儲存設定", expSize: "儲存尺寸", custom: "自訂", expFull:"原始大小", jpgQ: "JPG 畫質", exif: "屬性資料", 
+    expName: "檔案名稱儲存為:", expHint: "儲存時將自動加上副檔名",
+    saveSet: "↓ 儲存調整設定", loadSet: "↑ 載入調整設定", filterSet:"濾鏡強度",
+    none: "無濾鏡", pop: "Pop", soft: "柔和", watercolor: "水彩風", anime: "動畫風", oil: "油畫風",
+    bw: "灰階", noir: "黑白", sketch: "素描風", comic: "漫畫風", comic2: "彩色漫畫風", pixelA: "Pixel", pixelB: "Pixel Game"
+  }
+};
+let currentLang = 'en';
+
 /* =========================================================================
    Image processing (ported from lib/image-processing.ts)
    ========================================================================= */
 const DEFAULT_ADJ = {
   brightness:0, contrast:0, highlight:0, darkness:0, warmth:0, tint:0,
   blur:0, vignette:0, red:0, green:0, blue:0,
-  saturation:0, clarity:0, fade:0, grain:0
+  saturation:0, clarity:0, fade:0, grain:0,
+  smooth:0, selTolerance:20, selDesat:0, selPop:0, selColor: "#ff0000"
 };
 
 function cloneImageData(src){
@@ -943,6 +1047,105 @@ function pixelate(src, strength, radiusScale = 1) {
 function pixelateGame(src, strength, radiusScale = 1) {
   return _pixelCore(src, strength, true, radiusScale);
 }
+function applySurfaceSmooth(src, strength) {
+  if (strength <= 0) return src;
+  const out = cloneImageData(src), d = out.data, s = src.data;
+  const w = src.width, h = src.height;
+  
+  // OPTIMIZATION: Use squared threshold to avoid Math.sqrt in the loop
+  const threshold = 60; // 40 or 60 or 80, higher means more blur
+  const thresholdSq = threshold * threshold; 
+  
+  // OPTIMIZATION: Clamp radius to keep it lightweight on mobile
+  const radius = Math.min(3, Math.max(1, Math.floor(strength / 25)));
+
+  for (let y = radius; y < h - radius; y++) {
+    for (let x = radius; x < w - radius; x++) {
+      const i = (y * w + x) * 4;
+      let rSum = 0, gSum = 0, bSum = 0, count = 0;
+      const rO = s[i], gO = s[i+1], bO = s[i+2];
+
+      for (let dy = -radius; dy <= radius; dy++) {
+        const rowOffset = (y + dy) * w;
+        for (let dx = -radius; dx <= radius; dx++) {
+          const ni = (rowOffset + (x + dx)) * 4;
+          const rN = s[ni], gN = s[ni+1], bN = s[ni+2];
+          
+          // Fast Squared Distance calculation
+          const diffSq = (rO-rN)*(rO-rN) + (gO-gN)*(gO-gN) + (bO-bN)*(bO-bN);
+          
+          if (diffSq < thresholdSq) {
+            rSum += rN; gSum += gN; bSum += bN; count++;
+          }
+        }
+      }
+      if (count > 0) {
+        d[i] = rSum / count; 
+        d[i+1] = gSum / count; 
+        d[i+2] = bSum / count;
+      }
+    }
+  }
+  return out;
+}
+
+function applySelectiveColor(src, targetHex, tolerance, desat, pop) {
+  if (desat === 0 && pop === 0) return src;
+  const out = cloneImageData(src), d = out.data;
+  
+  // Convert target hex to HSL
+  const rT = parseInt(targetHex.slice(1,3), 16), gT = parseInt(targetHex.slice(3,5), 16), bT = parseInt(targetHex.slice(5,7), 16);
+  const targetH = rgbToHsl(rT, gT, bT)[0];
+  const tol = tolerance / 100 * 0.5; // Normalized hue range
+
+  for (let i = 0; i < d.length; i += 4) {
+    const [h, s, l] = rgbToHsl(d[i], d[i+1], d[i+2]);
+    
+    // Calculate circular hue distance
+    let hDiff = Math.abs(h - targetH);
+    if (hDiff > 0.5) hDiff = 1.0 - hDiff;
+
+    if (hDiff > tol) {
+      // Outside tolerance: Apply Background Desaturation
+      if (desat > 0) {
+        const factor = 1 - (desat / 100);
+        const lum = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+        d[i] = lum + (d[i] - lum) * factor;
+        d[i+1] = lum + (d[i+1] - lum) * factor;
+        d[i+2] = lum + (d[i+2] - lum) * factor;
+      }
+    } else {
+      // Inside tolerance: Apply Color Pop
+      if (pop > 0) {
+        const p = 1 + (pop / 100);
+        const lum = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+        d[i] = Math.min(255, lum + (d[i] - lum) * p * 1.2);
+        d[i+1] = Math.min(255, lum + (d[i+1] - lum) * p * 1.2);
+        d[i+2] = Math.min(255, lum + (d[i+2] - lum) * p * 1.2);
+      }
+    }
+  }
+  return out;
+}
+
+// Utility for HSL math
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) h = s = 0;
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return [h, s, l];
+}
 
 function applyFilter(src, filter, radiusScale=1){
   switch(filter){
@@ -995,7 +1198,11 @@ const ADJ_GROUPS = [
   { label:"Effects", items:[
     [ {key:"clarity", label:"Clarity", min:0, max:100}, {key:"blur", label:"Blur", min:0, max:20} ],
     [ {key:"fade", label:"Fade", min:0, max:100}, {key:"vignette", label:"Vignette", min:0, max:100} ],
-    {key:"grain", label:"Grain", min:0, max:100},
+    [ {key:"smooth", label:"Smooth", min:0, max:100}, {key:"grain", label:"Grain", min:0, max:100} ],
+  ]},
+  { label:"Color Pop", items:[
+    [ {key:"selTolerance", label:"Tolerance", min:1, max:100}, {key:"selPop", label:"Pop", min:0, max:100} ],
+    {key:"selDesat", label:"Background Sat", min:0, max:100}
   ]},
 ];
 
@@ -1254,6 +1461,7 @@ let levels = { black: 0, gamma: 1.0, white: 255 };
 const histCanvas = document.getElementById("histCanvas");
 const hCtx = histCanvas.getContext("2d");
 loadFromStorage(); // now safe — adjustments variable exists
+let isInteracting = false; // Flag to skip heavy DSP during slider moves
 let rafId = null;
 
 const canvas = document.getElementById("canvas");
@@ -1261,22 +1469,86 @@ const ctx = canvas.getContext("2d", { willReadFrequently:true });
 const cropOverlay = document.getElementById("cropOverlay");
 const cropCtx = cropOverlay.getContext("2d");
 const canvasWrap = document.getElementById("canvasWrap");
-/* ---- Tap-and-hold canvas to peek before/after (mobile) ---- */
+// Prevent right-click/long-press menu on canvas to allow "Peek" to work
+canvas.addEventListener("contextmenu", e => e.preventDefault());
+/* ---- Before / After Peek (Desktop & Mobile) ---- */
 let holdTimer = null;
-canvas.addEventListener("touchstart", e => {
-  if (cropping || !originalImageData) return;
-  holdTimer = setTimeout(() => {
-    showingBefore = true;
-    ctx.putImageData(sourceImageData, 0, 0);
-  }, 500);
+let isKeyboardPeeking = false;
+
+function showBefore() {
+  if (!originalImageData || cropping) return;
+  showingBefore = true;
+
+  const pw = originalImageData.width, ph = originalImageData.height;
+  
+  ctx.save();
+  // Maintain the current canvas border/background color
+  ctx.fillStyle = canvasSettings.color || "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const dx = (canvas.width - pw) / 2;
+  const dy = (canvas.height - ph) / 2;
+
+  // Draw the unedited original photo within the exact current crop & frame
+  const temp = document.createElement("canvas");
+  temp.width = pw;
+  temp.height = ph;
+  temp.getContext("2d").putImageData(originalImageData, 0, 0);
+
+  ctx.drawImage(temp, Math.round(dx), Math.round(dy));
+  ctx.restore();
+}
+
+function hideBefore() {
+  if (showingBefore) {
+    showingBefore = false;
+    render();
+  }
+}
+
+// Keyboard Peek: HOLD mode
+document.addEventListener("keydown", e => {
+  if (e.key === "\\" && !isKeyboardPeeking && e.target.tagName !== "INPUT") {
+    isKeyboardPeeking = true;
+    showBefore();
+  }
+});
+document.addEventListener("keyup", e => {
+  if (e.key === "\\") {
+    isKeyboardPeeking = false;
+    hideBefore();
+  }
+});
+
+// Desktop: Instant Peek
+canvas.addEventListener("mousedown", (e) => {
+  if (e.button !== 0) return; // Only left click
+  showBefore();
+});
+
+// Mobile: 500ms Delay Peek with Gesture Protection
+canvas.addEventListener("touchstart", (e) => {
+  if (cropping || !originalImageData || e.touches.length > 1) {
+    clearTimeout(holdTimer);
+    return;
+  }
+  holdTimer = setTimeout(showBefore, 500);
 }, {passive:true});
+
+// Shared: Hide "Before" when moving or letting go
+window.addEventListener("mousemove", () => { if (showingBefore) hideBefore(); });
+window.addEventListener("mouseup", hideBefore);
+
+canvas.addEventListener("touchmove", () => {
+  clearTimeout(holdTimer); 
+  if (showingBefore) hideBefore();
+}, {passive:true});
+
 canvas.addEventListener("touchend", () => {
   clearTimeout(holdTimer);
-  if (showingBefore){ showingBefore = false; render(); }
+  hideBefore();
 });
-canvas.addEventListener("touchmove", () => {
-  clearTimeout(holdTimer); // cancel hold if finger moves (panning)
-});
+
 const dropzone = document.getElementById("dropzone");
 const sidebar = document.getElementById("sidebar");
 const fileInput = document.getElementById("fileInput");
@@ -1324,6 +1596,7 @@ FILTERS.forEach(f => {
   els.filterGrid.appendChild(b);
 });
 
+
 /* ---------- Build adjustment sliders ---------- */
 const sliderEls = {};
 // tabFrame click handled by switchTab below
@@ -1356,17 +1629,29 @@ ADJ_GROUPS.forEach(group => {
       const val = row.querySelector(".val");
       sliderEls[item.key] = { input, val };
       
+      input.addEventListener("mousedown", () => { isInteracting = true; });
+      input.addEventListener("touchstart", () => { isInteracting = true; }, {passive:true});
+
       input.addEventListener("input", () => {
         adjustments[item.key] = Number(input.value);
         updateSliderLabel(item.key);
         scheduleRender();
       });
-      // Capture Undo state only when user finishes sliding
-      input.addEventListener("change", () => {
-        historyPush(false);
-        saveToStorage();
-      });
-      val.addEventListener("click", () => { 
+
+      // When user lets go, turn off interacting, render full quality, and record 1 Undo step
+      const endMove = () => {
+        if (isInteracting) {
+          isInteracting = false;
+          render(); // High quality pass
+          historyPush(false); // Single, clean history push
+          saveToStorage();
+        }
+      };
+      input.addEventListener("mouseup", endMove);
+      input.addEventListener("touchend", endMove);
+      input.addEventListener("change", endMove);
+
+      val.addEventListener("click", () => {
         historyPush(false);
         input.value = 0; adjustments[item.key]=0; 
         updateSliderLabel(item.key); scheduleRender(); 
@@ -1465,10 +1750,14 @@ function setupImage(img){
   dropzone.style.display = "none";
   canvasWrap.style.display = "block";
   sidebar.style.display = "flex";
-    [els.newBtn, els.undoBtn, els.redoBtn, els.cropBtn, els.flipBtn, els.rotateBtn, els.resetBtn, els.exportPngBtn, els.exportJpgBtn].forEach(b => b.style.display = "inline-flex");
+  selColorRow.style.display = "block";
+  const dNav = document.getElementById("desktopNav");
+  if (dNav) dNav.style.display = window.innerWidth > 860 ? "inline-flex" : "none";
+  [els.newBtn, els.undoBtn, els.redoBtn, els.cropBtn, els.flipBtn, els.rotateBtn, els.resetBtn, els.exportPngBtn, els.exportJpgBtn].forEach(b => b.style.display = "inline-flex");
   stageOverlay.classList.add("visible");
   autoFitZoom();
   syncExportName();
+  updateLanguageUI(); // Ensures correct labels show up when the sidebar appears
 }
 
 function resetUIState(){
@@ -1762,10 +2051,11 @@ function drawHistogram(imgData) {
   const lumBins = new Uint32Array(256);
   let maxFreq = 0;
 
-  for (let i = 0; i < data.length; i += 4) {
+  // DSP Optimization: Subsample every 4th pixel for 4x faster execution
+  for (let i = 0; i < data.length; i += 16) {
     const r = data[i], g = data[i+1], b = data[i+2];
     rBins[r]++; gBins[g]++; bBins[b]++;
-    const lum = Math.round(0.299*r + 0.587*g + 0.114*b);
+    const lum = (r * 77 + g * 150 + b * 29) >> 8; // Fast integer luminance calculation
     lumBins[lum]++;
     if (rBins[r] > maxFreq) maxFreq = rBins[r];
     if (gBins[g] > maxFreq) maxFreq = gBins[g];
@@ -1818,6 +2108,12 @@ function render(){
   if (adjustments.saturation !== 0) photoData = saturate(photoData, 1 + adjustments.saturation/100);
   if (adjustments.clarity > 0)      photoData = applyClarity(photoData, adjustments.clarity);
   if (adjustments.blur > 0)         photoData = boxBlur(photoData, adjustments.blur);
+  // Fast-Path: Skip only the heavy neighborhood smoothing while moving sliders
+  if (!isInteracting && adjustments.smooth > 0) {
+    photoData = applySurfaceSmooth(photoData, adjustments.smooth);
+  }
+  // Run Selective Color in real-time on every frame (lightweight 1-pass execution)
+  photoData = applySelectiveColor(photoData, adjustments.selColor, adjustments.selTolerance, adjustments.selDesat, adjustments.selPop);
   if (adjustments.vignette > 0)     photoData = applyVignette(photoData, adjustments.vignette);
   if (adjustments.grain > 0)        photoData = applyGrain(photoData, adjustments.grain);
 
@@ -1947,6 +2243,46 @@ els.rotateBtn.addEventListener("click", () => {
 const cvMarginEl = document.getElementById("cvMargin");
 const cvMarginVal = document.getElementById("cvMarginVal");
 const cvColorEl = document.getElementById("cvColor");
+const selColorRow = document.getElementById("selColorRow");
+const selColorEl = document.getElementById("selColor");
+const selColorHex = document.getElementById("selColorHex");
+const eyeDropperBtn = document.getElementById("eyeDropperBtn");
+let isSamplingColor = false;
+
+selColorEl.addEventListener("input", () => {
+  adjustments.selColor = selColorEl.value;
+  selColorHex.textContent = selColorEl.value.toUpperCase();
+  scheduleRender();
+});
+
+eyeDropperBtn.addEventListener("click", () => {
+  isSamplingColor = !isSamplingColor;
+  const t = TRANSLATIONS[currentLang]; // Get current language dictionary
+  eyeDropperBtn.textContent = isSamplingColor ? t.sampling : t.sampleImg;
+  eyeDropperBtn.style.color = isSamplingColor ? "var(--accent)" : "";
+  canvas.style.cursor = isSamplingColor ? "crosshair" : "";
+});
+
+canvas.addEventListener("click", (e) => {
+  if (!isSamplingColor) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.round((e.clientX - rect.left) * (canvas.width / rect.width));
+  const y = Math.round((e.clientY - rect.top) * (canvas.height / rect.height));
+  
+  const pixel = ctx.getImageData(x, y, 1, 1).data;
+  const hex = "#" + ((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1);
+  
+  adjustments.selColor = hex;
+  selColorEl.value = hex;
+  selColorHex.textContent = hex.toUpperCase();
+  
+  isSamplingColor = false;
+  eyeDropperBtn.textContent = "Sample Image";
+  eyeDropperBtn.style.color = "";
+  canvas.style.cursor = "";
+  scheduleRender();
+  historyPush(false);
+});
 
 cvMarginEl.addEventListener("input", () => {
   canvasSettings.margin = Number(cvMarginEl.value);
@@ -2139,6 +2475,8 @@ function renderForExport(){
   if (adjustments.saturation !== 0) result = saturate(result, 1 + adjustments.saturation/100);
   if (adjustments.clarity > 0)      result = applyClarity(result, adjustments.clarity);
   if (adjustments.blur > 0)         result = boxBlur(result, Math.round(adjustments.blur * radiusScale));
+  if (adjustments.smooth > 0) result = applySurfaceSmooth(result, adjustments.smooth);
+  result = applySelectiveColor(result, adjustments.selColor, adjustments.selTolerance, adjustments.selDesat, adjustments.selPop);
   if (adjustments.vignette > 0)     result = applyVignette(result, adjustments.vignette);
   if (adjustments.grain > 0)        result = applyGrain(result, adjustments.grain);
   
@@ -2549,7 +2887,7 @@ function applyCrop(){
   syncExportName();
 }
 
-/* ---------- Mobile tabs ---------- */
+/* ---------- Mobile tabs & Desktop Jump Navigation ---------- */
 const tabFilters = document.getElementById("tabFilters");
 const tabAdjust = document.getElementById("tabAdjust");
 const paneFilters = document.getElementById("paneFilters");
@@ -2563,6 +2901,22 @@ function switchTab(tabEl, paneEl){
   tabEl.classList.add("active");
   paneEl.classList.add("active");
 }
+
+function jumpToPane(paneId) {
+  const pane = document.getElementById(paneId);
+  if (pane) {
+    pane.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+const dTabAdj = document.getElementById("dTabAdjust");
+if (dTabAdj) dTabAdj.addEventListener("click", () => jumpToPane("paneAdjust"));
+const dTabExp = document.getElementById("dTabExport");
+if (dTabExp) dTabExp.addEventListener("click", () => jumpToPane("paneExport"));
+const dTabFrm = document.getElementById("dTabFrame");
+if (dTabFrm) dTabFrm.addEventListener("click", () => jumpToPane("paneFrame"));
+const dTabFlt = document.getElementById("dTabFilters");
+if (dTabFlt) dTabFlt.addEventListener("click", () => jumpToPane("paneFilters"));
 
 document.getElementById("frameModeToggle").addEventListener("click", () => {
   stageEl.classList.toggle("frame-mode");
@@ -2636,26 +2990,162 @@ function pushLevelsHistory() {
   levelsHistTimer = setTimeout(() => historyPush(false), 600);
 }
 
+// Optimized Tonal Suite Listeners
+[els.levBlack, els.levGamma, els.levWhite].forEach(el => {
+  el.addEventListener("mousedown", () => { isInteracting = true; });
+  el.addEventListener("touchstart", () => { isInteracting = true; }, {passive:true});
+  
+  const endTonal = () => {
+    if (isInteracting) {
+      isInteracting = false;
+      render(); // Final high-quality pass
+      historyPush(false);
+      saveToStorage();
+    }
+  };
+  el.addEventListener("mouseup", endTonal);
+  el.addEventListener("touchend", endTonal);
+});
+
 els.levBlack.addEventListener("input", () => {
   levels.black = Number(els.levBlack.value);
   els.levBlackVal.textContent = levels.black;
   scheduleRender();
 });
-els.levBlack.addEventListener("change", () => { historyPush(false); saveToStorage(); });
-
 els.levGamma.addEventListener("input", () => {
   levels.gamma = Number(els.levGamma.value);
   els.levGammaVal.textContent = levels.gamma.toFixed(2);
   scheduleRender();
 });
-els.levGamma.addEventListener("change", () => { historyPush(false); saveToStorage(); });
-
 els.levWhite.addEventListener("input", () => {
   levels.white = Number(els.levWhite.value);
   els.levWhiteVal.textContent = levels.white;
   scheduleRender();
 });
-els.levWhite.addEventListener("change", () => { historyPush(false); saveToStorage(); });
+
+function updateLanguageUI() {
+  const t = TRANSLATIONS[currentLang];
+  const langBtn = document.getElementById("langToggle");
+  if (langBtn) langBtn.textContent = currentLang === 'en' ? "EN" : "中";
+  
+  // 1. Navigation & Header (Mobile tabs + Desktop Nav buttons)
+  const tabIds = { 
+    "tabAdjust": t.adjust, "tabExport": t.export, "tabFrame": t.frame, "tabFilters": t.filters,
+    "dTabAdjust": t.adjust, "dTabExport": t.export, "dTabFrame": t.frame, "dTabFilters": t.filters
+  };
+  for (let id in tabIds) { let el = document.getElementById(id); if (el) el.textContent = tabIds[id]; }
+  
+  const btnIds = { "newBtn": t.open, "rotateBtn": t.rotate, "resetBtn": t.reset, "cancelCropBtn": t.cancel, "flipBtn": t.flip, "exportJpgBtn": t.expJpg, "exportPngBtn": t.expPng, "exportJpgBtn2": t.expJpg, "exportPngBtn2": t.expPng };
+  for (let id in btnIds) { let el = document.getElementById(id); if (el) el.textContent = btnIds[id]; }
+
+  let cBtn = document.getElementById("cropBtn");
+  if (cBtn) cBtn.textContent = cropping ? t.apply : t.crop;
+
+  // Subtitle & Zoom
+  let brandSpan = document.querySelector(".brand span");
+  if (brandSpan) brandSpan.innerHTML = (currentLang === 'zh' ? "相片編輯器" : "Image Editor") + " &copy; 2026";
+  let zoomL = document.querySelector("#zoomBadge label");
+  if (zoomL) zoomL.textContent = currentLang === 'zh' ? "縮放" : "Zoom";
+
+// 2. Landing Page (Dropzone)
+  let droph2 = document.querySelector(".dropzone h2")
+  if (droph2) droph2.textContent = t.dropH;
+
+  let dropzonep = document.querySelector(".dropzone p")
+  if (dropzonep) dropzonep.textContent = t.dropP;
+
+  let browseB = document.getElementById("browseBtn")
+  if (browseB) browseB.textContent = t.dropB;
+
+  
+  // 2. Adjust Pane General
+  let adjTitle = document.querySelector(".pane-adjust .section-title");
+  if (adjTitle) adjTitle.textContent = t.adjust;
+  
+  let hPk = document.getElementById("hintPeek"); if (hPk) hPk.innerHTML = t.hintPeek;
+  let hRs = document.getElementById("hintReset"); if (hRs) hRs.textContent = t.hintReset;
+  let hCv = document.getElementById("hintCanvas"); if (hCv) hCv.textContent = t.canvasHint;
+  let hName = document.getElementById("hintName"); if (hName) hName.textContent = t.expName;
+  let hEx = document.getElementById("hintExport"); if (hEx) hEx.textContent = t.expHint;
+
+  let histT = document.querySelector("#tonalSuite .section-title");
+  if (histT) histT.textContent = t.hist;
+  let autoB = document.getElementById("autoLevelsBtn");
+  if (autoB) autoB.textContent = t.auto;
+  let rAdjB = document.getElementById("resetAdjBtn");
+  if (rAdjB) rAdjB.textContent = t.resetAll;
+
+  // 3. Sliders & Groups
+  const groupLabels = document.querySelectorAll("#adjustGroups .group-label");
+  const gTitles = [t.groupLight, t.groupColor, t.groupColorPop, t.groupEffects];
+  groupLabels.forEach((el, i) => { if (gTitles[i]) el.textContent = gTitles[i]; });
+
+  document.querySelectorAll(".slider-row").forEach(row => {
+    let input = row.querySelector("input");
+    let label = row.querySelector("label");
+    if (input && label && t[input.dataset.key]) label.textContent = t[input.dataset.key];
+  });
+  
+  const tonalLabels = document.querySelectorAll("#tonalSuite label");
+  const tTitles = [t.blackP, t.midP, t.whiteP];
+  tonalLabels.forEach((el, i) => { if (tTitles[i]) el.textContent = tTitles[i]; });
+
+  // 4. Color Pop & Canvas
+  let targetT = document.querySelector("#selColorRow .section-title");
+  if (targetT) targetT.textContent = t.targetCol;
+  let eyeB = document.getElementById("eyeDropperBtn");
+  if (eyeB) eyeB.textContent = isSamplingColor ? t.sampling : t.sampleImg;
+
+  let cvTitle = document.querySelector(".pane-frame .section-title");
+  if (cvTitle) cvTitle.textContent = t.canvasTitle;
+  let frToggle = document.getElementById("frameModeToggle");
+  if (frToggle) frToggle.textContent = (stageEl.classList.contains("frame-mode") ? "☑ " : "☐ ") + t.frameMode;
+  let ratOrig = document.querySelector(".ratio-btn[data-ratio='original']");
+  if (ratOrig) ratOrig.textContent = t.original;
+
+  // 4. Canvas Pane
+  
+let frameLabels = document.querySelectorAll(".frame-panel label");
+  if (frameLabels.length >= 2) {
+    frameLabels[0].textContent = t.border;
+    frameLabels[1].textContent = t.color;
+  }
+
+  // 5. Export Pane
+  let expTitle = document.querySelector(".pane-export .section-title");
+  if (expTitle) expTitle.textContent = t.expTitle;
+  let fullSz = document.getElementById("expSizeFull");
+  if (fullSz) fullSz.textContent = t.expFull;
+  let expS = document.getElementById("expSz");
+  if (expS) expS.textContent = t.expSize;
+  let custSz = document.getElementById("expSizeCustom");
+  if (custSz) custSz.textContent = t.custom;
+  let qLab = document.getElementById("jpgQ");
+  if (qLab) qLab.textContent = t.jpgQ;
+  let sBtn = document.getElementById("exportSettingsBtn");
+  if (sBtn) sBtn.textContent = t.saveSet;
+  let lBtn = document.getElementById("importSettingsBtn");
+  if (lBtn) lBtn.textContent = t.loadSet;
+
+  // 6. Filters
+  let filterLabels = document.querySelectorAll("#paneFilters label");
+  if (filterLabels.length > 0) {
+    filterLabels[0].textContent = t.filterSet;
+  }
+  let fTitle = document.querySelector(".pane-filters .section-title");
+  if (fTitle) fTitle.textContent = t.filters;
+  document.querySelectorAll(".filter-btn").forEach(btn => {
+    if (t[btn.dataset.id]) {
+      let s = btn.querySelector("strong");
+      if (s) s.textContent = t[btn.dataset.id];
+    }
+  });
+}
+
+document.getElementById("langToggle").addEventListener("click", () => {
+  currentLang = currentLang === 'en' ? 'zh' : 'en';
+  updateLanguageUI();
+});
 
 </script>
 </body>
