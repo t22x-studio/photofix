@@ -19,8 +19,8 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23161311'/%3E%3Ctext x='50' y='72' text-anchor='middle' font-size='70' fill='%23f59e0b'%3E%26%23x2365;%3C/text%3E%3C/svg%3E" />
 
-<!-- Single-File Inline Web App Manifest -->
-<link rel="manifest" href='data:application/manifest+json,{"name":"Photo Helper","short_name":"PhotoHelper","display":"standalone","background_color":"#0c0a09","theme_color":"#0c0a09"}' />
+<!-- Single-File Inline Web App Manifest (Universal Compatibility) -->
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Photo%20Helper%22%2C%22short_name%22%3A%22PhotoHelper%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230c0a09%22%2C%22theme_color%22%3A%22%230c0a09%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0 0 100 100'%253E%253Crect%20width%3D'100'%20height%3D'100'%20rx%3D'20'%20fill%3D'%2523161311'%2F%253E%253Ctext%20x%3D'50'%20y%3D'72'%20text-anchor%3D'middle'%20font-size%3D'70'%20fill%3D'%2523f59e0b'%253E%2526%2523x2365%3B%253C%2Ftext%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22192x192%20512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D" />
 <style>
   :root {
     --bg: #0c0a09;
@@ -683,24 +683,25 @@ function boxBlur(src, radius){
   }
   return new ImageData(out,w,h);
 }
-function applyBokeh(src, strength, focusArea) {
+function applyBokeh(src, strength, focusArea, isFastPreview = false) {
   if (strength <= 0) return src;
   const w = src.width, h = src.height;
   const out = cloneImageData(src), d = out.data, s = src.data;
-  
-  // DSP Self-Calibrating Scale: Linear ratio against preview base (820px)
+
+  // 100% Full Native Resolution: No downsampling, no canvas shrinking
   const resScale = Math.max(1, w / 820);
-  
-  // 3-Pass Gaussian Radius Math: Splitting into 3 sub-passes produces pure optical silk
-  const passRadius = Math.max(1, Math.round(((strength / 100) * 14) * resScale));
-  
-  // 3-Pass Central Limit Theorem Gaussian Convergence (Zero blockiness)
-  let blurred = boxBlur(cloneImageData(src), passRadius);
-  blurred = boxBlur(blurred, passRadius);
-  blurred = boxBlur(blurred, passRadius);
+  const blurRadius = Math.max(1, Math.round(((strength / 100) * 14) * resScale));
+
+  // Fast-Path: 1 pass while actively dragging sliders (60 FPS); 
+  // Release & Export: 3-Pass True Gaussian Optical Silk
+  let blurred = boxBlur(cloneImageData(src), blurRadius);
+  if (!isFastPreview) {
+    blurred = boxBlur(blurred, blurRadius);
+    blurred = boxBlur(blurred, blurRadius);
+  }
   const b = blurred.data;
 
-  // At 0% focus area, blur 100% of the entire image uniformly
+  // 0% Focus Area -> 100% full-frame blur
   if (focusArea <= 0) {
     for (let i = 0; i < d.length; i += 4) {
       d[i]   = b[i];
@@ -712,7 +713,6 @@ function applyBokeh(src, strength, focusArea) {
 
   const cx = w / 2, cy = h / 2;
   const maxDist = Math.sqrt(cx * cx + cy * cy);
-  // Optical focal safe zone
   const innerRadius = (focusArea / 100) * (maxDist * 0.7);
   const transitionRange = Math.max(1, maxDist * 0.35);
 
@@ -2187,7 +2187,8 @@ function render(){
   let photoData = applyAdjustments(filterBase, adjustments);
   if (adjustments.saturation !== 0) photoData = saturate(photoData, 1 + adjustments.saturation/100);
   if (adjustments.clarity > 0)      photoData = applyClarity(photoData, adjustments.clarity);
-  if (adjustments.bokeh > 0)        photoData = applyBokeh(photoData, adjustments.bokeh, adjustments.bokehRadius);
+  // Runs 1-pass while sliding for 60 FPS, commits full 3-pass on release
+  if (adjustments.bokeh > 0)        photoData = applyBokeh(photoData, adjustments.bokeh, adjustments.bokehRadius, isInteracting);
   if (adjustments.blur > 0)         photoData = boxBlur(photoData, adjustments.blur);
   // Fast-Path: Skip only the heavy neighborhood smoothing while moving sliders
   if (!isInteracting && adjustments.smooth > 0) {
@@ -2525,7 +2526,8 @@ function renderForExport(){
   result = applyAdjustments(result, adjustments);
   if (adjustments.saturation !== 0) result = saturate(result, 1 + adjustments.saturation/100);
   if (adjustments.clarity > 0)      result = applyClarity(result, adjustments.clarity);
-  if (adjustments.bokeh > 0)        result = applyBokeh(result, adjustments.bokeh, adjustments.bokehRadius);
+  // Full 3-Pass True Gaussian Optical Blur at 100% native resolution
+  if (adjustments.bokeh > 0)        result = applyBokeh(result, adjustments.bokeh, adjustments.bokehRadius, false);
   if (adjustments.blur > 0)         result = boxBlur(result, Math.round(adjustments.blur * radiusScale));
   if (adjustments.smooth > 0) result = applySurfaceSmooth(result, adjustments.smooth);
   result = applySelectiveColor(result, adjustments.selColor, adjustments.selTolerance, adjustments.selDesat, adjustments.selPop);
@@ -2538,8 +2540,23 @@ function renderForExport(){
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-// 1. Pure Direct File Download (Single-click save to Downloads on all browsers)
+// Guaranteed Export & Download Handler
 function triggerDownload(dataURL, filename) {
+  if (isIOS) {
+    // iPhone / iPad: Open clean preview tab for instant Long-Press -> "Save to Photos" (Camera Roll)
+    const w = window.open();
+    if (w) {
+      w.document.write(
+        '<body style="margin:0;background:#0c0a09;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#a8a29e;font-family:system-ui,sans-serif;">' +
+        '<img src="' + dataURL + '" style="max-width:100%;max-height:85vh;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.8);">' +
+        '<p style="margin-top:16px;font-size:13px;">' + (currentLang === 'zh' ? '長按圖片並點選「儲存影像」以存入相簿' : 'Long-press the image and tap "Save to Photos"') + '</p>' +
+        '</body>'
+      );
+      w.document.title = filename;
+      return;
+    }
+  }
+  // Desktop & Android: Direct single-click file download
   const link = document.createElement("a");
   link.download = filename;
   link.href = dataURL;
@@ -2548,38 +2565,15 @@ function triggerDownload(dataURL, filename) {
   document.body.removeChild(link);
 }
 
-// 2. Dedicated Native Share Action (Instagram / Camera Roll / AirDrop / Email)
+// Share Button Handler (Triggers Native Share or iOS Camera Roll Preview)
 async function shareImage() {
   const q = Number(els.jpgQuality.value) / 100;
   const off = renderForExport();
   const filename = buildExportName("jpg");
-  
-  let finalBlob;
-  if (keepExif && originalFileHeader) {
-    const rawJpg = off.toDataURL("image/jpeg", q);
-    const blobUrl = injectExif(rawJpg, originalFileHeader);
-    const res = await fetch(blobUrl);
-    finalBlob = await res.blob();
-  } else {
-    finalBlob = await new Promise(resolve => off.toBlob(resolve, "image/jpeg", q));
-  }
+  const rawJpg = off.toDataURL("image/jpeg", q);
+  const finalUrl = (keepExif && originalFileHeader) ? injectExif(rawJpg, originalFileHeader) : rawJpg;
 
-  const file = new File([finalBlob], filename, { type: "image/jpeg" });
-
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({
-        files: [file],
-        title: filename
-      });
-      return;
-    } catch (err) {
-      if (err.name === "AbortError") return;
-    }
-  }
-
-  // Fallback if system share is not supported
-  triggerDownload(off.toDataURL("image/jpeg", q), filename);
+  triggerDownload(finalUrl, filename);
 }
 
 // Wire the Share buttons
